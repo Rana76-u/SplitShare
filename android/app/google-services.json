@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "757968596460",
+    "project_id": "splitshare-48457",
+    "storage_bucket": "splitshare-48457.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:757968596460:android:b7954392106f5c7cc764c9",
+        "android_client_info": {
+          "package_name": "com.rafiqul.splitshare_v3"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "757968596460-fa874uq3qevq0lbehkvlacpe9renjsdl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgmZ-DVVVGcQs8GMijSyozL3bdsbOgmm8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "757968596460-fa874uq3qevq0lbehkvlacpe9renjsdl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "757968596460-fjpsobnm9li91che2m6suodm0nehii9l.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.splitshare.splitshare"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:757968596460:android:6789883f7ae2d96cc764c9",
+        "android_client_info": {
+          "package_name": "com.splitshare.splitshare"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "757968596460-m2i8h1rfe1ab1ljqh5492trtq9olm074.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.splitshare.splitshare",
+            "certificate_hash": "8060d075350bae781576d414b6a7ccf66967ac98"
+          }
+        },
+        {
+          "client_id": "757968596460-fa874uq3qevq0lbehkvlacpe9renjsdl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgmZ-DVVVGcQs8GMijSyozL3bdsbOgmm8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "757968596460-fa874uq3qevq0lbehkvlacpe9renjsdl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "757968596460-fjpsobnm9li91che2m6suodm0nehii9l.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.splitshare.splitshare"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
