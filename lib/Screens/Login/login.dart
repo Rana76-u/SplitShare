@@ -39,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
                   'SPLITSHARE',
                   style: TextStyle(
                     fontFamily: 'Anurati',
-                    fontSize: 25,
+                    fontSize: 35,
                     letterSpacing: 3,
                   ),
                 ),
@@ -54,16 +54,16 @@ class _LoginPageState extends State<LoginPage> {
               ),
 
               //Space
-              const SizedBox(height: 10,),
+              const SizedBox(height: 40,),
 
               //Login Button
               isLoading ? const LinearProgressIndicator():
               SizedBox(
-                width: MediaQuery.of(context).size.width*0.55,
+                width: MediaQuery.of(context).size.width*0.51,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)
+                        borderRadius: BorderRadius.circular(12)
                     ),
                   ),
                   onPressed: () async{
@@ -83,8 +83,8 @@ class _LoginPageState extends State<LoginPage> {
                         .catchError((error) {
                       // Handle any error that occurred during sign-in
                       ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Error: $error')
+                          const SnackBar(
+                              content: Text('Login Failed') //$error
                           )
                       );
 
@@ -96,8 +96,9 @@ class _LoginPageState extends State<LoginPage> {
                   child: const Row(
                     children: [
                       Icon(BoxIcons.bxl_google),
+                      Spacer(),
                       Text(
-                        'Continue Using Google',
+                        'Continue With Google',
                         style: TextStyle(
                             fontFamily: 'Urbanist',
                             fontWeight: FontWeight.bold,

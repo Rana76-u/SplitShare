@@ -64,11 +64,11 @@ class _MyTripsState extends State<MyTrips> {
       []
     );
 
-    if(mounted){
+    /*if(mounted){
       setState(() {
-        _isLoading = false;
+
       });
-    }
+    }*/
   }
 
   void loadMyTrips() async {
@@ -99,6 +99,7 @@ class _MyTripsState extends State<MyTrips> {
         matchedTripNames = tripNames;
         matchedTripCodes = tripCodes;
         matchedTripDates = tripDates;
+        _isLoading = false;
       });
     }
   }
