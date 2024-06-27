@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hive/hive.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_scanner_overlay/qr_scanner_overlay.dart';
@@ -52,7 +53,9 @@ class _QRScannerState extends State<QRScanner> {
         });
 
         //Save to Prefs
-        TripInfoManager().saveTripInfo(tripCode);
+        var box = Hive.box('tripInfo');
+        box.put('tripCode', tripCode);
+        TripInfoManager().loadAndSaveTripInfo(tripCode);
 
         Get.to(
                 () => BottomBar(bottomIndex: 0),

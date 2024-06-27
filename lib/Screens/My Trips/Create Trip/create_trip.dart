@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:splitshare_v3/Models/global_variables.dart';
+import 'package:hive/hive.dart';
 import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
 import 'package:splitshare_v3/Widgets/loading.dart';
@@ -25,8 +25,6 @@ class _CreateTripState extends State<CreateTrip> {
   bool _isLoading = false;
 
   Future<void> createTrip() async {
-
-    firstLoadTripCode = randomTripCode;
 
     await FirebaseFirestore
         .instance
@@ -131,7 +129,9 @@ class _CreateTripState extends State<CreateTrip> {
                     await prefs.setString('creator', FirebaseAuth.instance.currentUser!.displayName.toString());
                     await prefs.setString('lastLoaded', DateTime.now().toString());
                     await prefs.setStringList('users', [FirebaseAuth.instance.currentUser!.uid]);*/
-                    await TripInfoManager().saveTripInfo(randomTripCode);
+                    var box = Hive.box('tripInfo');
+                    box.put('tripCode', randomTripCode);
+                    await TripInfoManager().loadAndSaveTripInfo(randomTripCode);
 
                     messenger.showSnackBar(
                         const SnackBar(

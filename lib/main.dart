@@ -2,13 +2,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive_flutter/adapters.dart';
+import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Screens/Login/login.dart';
 import 'package:splitshare_v3/Screens/My%20Trips/my_trips.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
 import 'package:splitshare_v3/firebase_options.dart';
-
 import 'API/firebase_api.dart';
+import 'Models/Hive/Event/hive_event_model.dart';
+import 'Models/Hive/User/hive_user_model.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +20,20 @@ void main() async {
   );
 
   await FirebaseApi().initNotifications();
+
+  await Hive.initFlutter();
+  Hive.registerAdapter(EventAdapter());
+  if (!Hive.isBoxOpen('events')) {
+    await Hive.openBox<Event>('events');
+  }
+  Hive.registerAdapter(UserAdapter());
+  if (!Hive.isBoxOpen('users')) {
+    await Hive.openBox<UserClass>('users');
+  }
+    // Check if the box is already open before opening it
+  if (!Hive.isBoxOpen('tripInfo')) {
+    await Hive.openBox('tripInfo');
+  }
   runApp(const MyApp());
 }
 
@@ -25,11 +42,11 @@ class MyApp extends StatelessWidget {
 
   Widget screenNavigator() {
     return FutureBuilder(
-      future: SharedPreferences.getInstance(),
+      future: TripInfoManager().getTripCode(),
       builder: (context, snapshot) {
         if (FirebaseAuth.instance.currentUser != null &&
             snapshot.connectionState == ConnectionState.done &&
-            snapshot.data!.getString('tripCode') != null) {
+            snapshot.data!.isNotEmpty) {
           return BottomBar(bottomIndex: 0); //Fix 0
         } else if (FirebaseAuth.instance.currentUser != null) {
           return const MyTrips();

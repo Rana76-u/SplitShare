@@ -3,15 +3,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:hive/hive.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:splitshare_v3/Screens/Home/home_appbar.dart';
 import 'package:splitshare_v3/Screens/Info/info_floating.dart';
 import 'package:splitshare_v3/Screens/My%20Trips/my_trips.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
+import '../../Models/Hive/Event/hive_event_model.dart';
+import '../../Models/Hive/User/hive_user_model.dart';
+import '../../Models/trip_info_manager.dart';
 
 class InfoPage extends StatefulWidget {
   const InfoPage({super.key});
@@ -30,9 +33,8 @@ class _InfoPageState extends State<InfoPage> {
   String tripCode = '';
   List<String> userIDs = [];
   List<String> userNames = [];
+  List<String> userImageUrls = [];
   List<String> providerIDs = [];
-
-  String versionName = '';
 
   @override
   void initState() {
@@ -53,16 +55,30 @@ class _InfoPageState extends State<InfoPage> {
   }
 
   void loadInfo() async {
-    final prefs = await SharedPreferences.getInstance();
 
-    tripCreator = prefs.getString('tripCreator')!;
-    tripDate = prefs.getString('tripDate')!;
-    tripName = prefs.getString('tripName')!;
-    tripCode = prefs.getString('tripCode')!;
-    userIDs = prefs.getStringList('userIDs')!;
-    userNames = prefs.getStringList('userNames')!;
+    //providerIDs = prefs.getStringList('providerIDs')!;
 
-    providerIDs = prefs.getStringList('providerIDs')!;
+    final tripBox = Hive.box('tripInfo');
+    tripCreator = tripBox.get('tripCreator');
+    tripDate = tripBox.get('tripDate');
+    tripName = tripBox.get('tripName');
+    tripCode = tripBox.get('tripCode');
+
+    /*final userBox = Hive.box<UserClass>('users');
+    userIDs = userBox.keys.cast<String>().toList();
+    userNames = userBox.values.map((user) => user.name).toList();*/
+    userIDs = await TripInfoManager().getTripUserIDs();
+    userNames = await TripInfoManager().getUserNames();
+    userImageUrls = await TripInfoManager().getUserImageUrls();
+
+    providerIDs.clear();
+    final eventBox = Hive.box<Event>('events');
+    final events = eventBox.values; // Retrieve all events from the Hive box
+    for (var event in events) {
+      if(event.action != 'delete'){
+        providerIDs.add(event.providedBy);
+      }
+    }
 
     parseTimestampString(tripDate);
 
@@ -186,15 +202,13 @@ class _InfoPageState extends State<InfoPage> {
             Get.to(() => const MyTrips(), transition: Transition.fade);
           }
           else {
+            //Delete from Save
+            final box = Hive.box<UserClass>('users');
+            await box.delete(userIDs[index]);
+
             //Delete from lists
             userIDs.removeAt(index);
             userNames.removeAt(index);
-
-            //Delete from SharedPreferences
-            final prefs = await SharedPreferences.getInstance();
-            prefs.setStringList('userIDs', userIDs);
-
-            prefs.setStringList('userNames', userNames);
 
             messenger.showSnackBar(const SnackBar(content: Text('User Removed')));
           }
@@ -225,7 +239,7 @@ class _InfoPageState extends State<InfoPage> {
           isLoading: false,
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: const InfoFloatingActionButton(),
+        floatingActionButton: InfoFloatingActionButton(connection: connection,),
         body: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(),
@@ -427,6 +441,16 @@ class _InfoPageState extends State<InfoPage> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 5),
           child: ListTile(
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: connection && userImageUrls[index] != '' || userImageUrls[index].isNotEmpty ?
+                SizedBox(
+                  height: 32.5,
+                  child: Image.network(userImageUrls[index]),
+                )
+                    :
+                const Icon(Icons.person),
+              ),
               title: Text(
                 userNames[index],
                 style: const TextStyle(overflow: TextOverflow.clip),
@@ -486,7 +510,7 @@ class _InfoPageState extends State<InfoPage> {
       padding: EdgeInsets.only(top: 50),
       child: Center(
         child: Text(
-          'Version 3.0.0',
+          'Version 4.0.0',
           style: TextStyle(color: Colors.grey),
           textAlign: TextAlign.center,
         ),

@@ -1,65 +1,78 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive/hive.dart';
+
+import '../API/user_api.dart';
+import 'Hive/User/hive_user_model.dart';
 
 class TripInfoManager {
 
-  Future<void> saveTripInfo(String tripCode) async {
-
-    String tripCreator = '';
-    String tripDate = '';
-    String lastEdited = '';
-    String tripName = '';
-    List<dynamic> users = [];
+  Future<void> loadAndSaveTripInfo(String tripCode) async {
 
     DocumentSnapshot snapshot =
     await FirebaseFirestore.instance.collection('trips').doc(tripCode).get();
 
     //Get All the data from Firebase
-    tripCreator = snapshot.get('creator');
-    tripDate = snapshot.get('date').toString();
-    lastEdited = snapshot.get('lastEdited').toString();
-    tripName = snapshot.get('tripName');
-    users = snapshot.get('users');
+    List userIDs = await snapshot.get('users');
+    List userNames = await UserApi().getUserNames(userIDs);
+    List userImageUrls = await UserApi().getUserImageUrls(userIDs);
 
-    //Save everything into SharedPreference
-    final prefs = await SharedPreferences.getInstance();
+    //Save Trip Info
+    var box = Hive.box('tripInfo');
+    box.put('tripCreator', snapshot.get('creator'));
+    box.put('tripDate', snapshot.get('date').toString());
+    box.put('tripName', snapshot.get('tripName'));
 
-    List<String> usersStringList = users.map((item) => item.toString()).toList();
+    //Save UserInfo
+    for(int i=0; i<userIDs.length; i++){
+      UserClass userClass = UserClass(
+          uid: userIDs[i],
+          name: userNames[i],
+          imageUrl: userImageUrls[i]
+      );
 
-    await prefs.setString('tripCode', tripCode); //await
-    await prefs.setString('tripCreator', tripCreator);
-    await prefs.setString('tripDate', tripDate);
-    await prefs.setString('lastEdited', lastEdited);
-    await prefs.setString('tripName', tripName);
-    await prefs.setStringList('userIDs', usersStringList);
+      final box = Hive.box<UserClass>('users');
+      box.put(userClass.uid, userClass);
+    }
   }
 
-  Future<String?> getTripName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('tripName');
+  Future<String> getTripName() async {
+    final box = Hive.box('tripInfo');
+    return box.get('tripName');
   }
 
-  Future<String?> getTripCode() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('tripCode');
+  Future<String> getTripCode() async {
+    final box = Hive.box('tripInfo');
+    return box.get('tripCode');
   }
 
-  Future<String?> getTripDate() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('date');
+  Future<String> getTripDate() async {
+    final box = Hive.box('tripInfo');
+    return box.get('tripDate');
   }
 
-  Future<String?> getTripCreator() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('creator');
+  Future<String> getTripCreator() async {
+    final box = Hive.box('tripInfo');
+    return box.get('tripCreator');
   }
 
-  Future<List<String>?> getTripUsers() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList('users');
+  Future<List<String>> getTripUserIDs() async {
+    final box = Hive.box<UserClass>('users');
+    return box.keys.cast<String>().toList();
   }
 
-  Future<void> clearTripInfo() async {
+  Future<List<String>> getUserNames() async {
+    final box = Hive.box<UserClass>('users');
+    return box.values.map((user) => user.name).toList();
+  }
+
+  Future<List<String>> getUserImageUrls() async {
+    final box = Hive.box<UserClass>('users');
+    return box.values.map((user) => user.imageUrl).toList();
+  }
+
+
+
+/*  Future<void> clearTripInfo() async {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.remove('tripName');
@@ -67,6 +80,6 @@ class TripInfoManager {
     await prefs.remove('date');
     await prefs.remove('creator');
     await prefs.remove('users');
-  }
+  }*/
 
 }

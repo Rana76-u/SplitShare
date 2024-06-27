@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:splitshare_v3/API/user_api.dart';
+import 'package:splitshare_v3/Models/trip_info_manager.dart';
+import 'package:splitshare_v3/Widgets/snack_bar.dart';
 
 import '../../Widgets/bottom_nav_bar.dart';
 
 class InfoFloatingActionButton extends StatefulWidget {
-  const InfoFloatingActionButton({super.key});
+  final bool connection;
+  const InfoFloatingActionButton({super.key, required this.connection});
 
   @override
   State<InfoFloatingActionButton> createState() => _InfoFloatingActionButtonState();
 }
 
 class _InfoFloatingActionButtonState extends State<InfoFloatingActionButton> {
+
   Future<void> _showTextInputDialog(BuildContext context) async {
     TextEditingController nameController = TextEditingController();
 
@@ -37,29 +40,19 @@ class _InfoFloatingActionButtonState extends State<InfoFloatingActionButton> {
               child: const Text('Submit'),
               onPressed: () async {
                 final navigator = Navigator.of(context);
-                final prefs = await SharedPreferences.getInstance();
-                String? tripCode = prefs.getString('tripCode');
-
-                //update saved name list
-                /*List<String> userNames = prefs.getStringList('userNames')!;
-                userNames.add(nameController.text);
-                await prefs.setStringList('userNames', userNames);*/
+                String? tripCode = await TripInfoManager().getTripCode();
 
                 //generate new user id
                 String newUserID = UserApi().generateUID();
 
-                //update saved id list
-                /*List<String> userIDs = prefs.getStringList('userIDs')!;
-                userNames.add(newUserID);
-                prefs.setStringList('userIDs', userIDs);*/
-
-                //save new user into new id inside userData database
+                //online
                 UserApi().addUser(newUserID, nameController.text, '', [tripCode]);
-                //update users list in trip
-                UserApi().addIntoTripsUserList(tripCode!, newUserID);
+                //offline
+                UserApi().addIntoTripsUserList(tripCode, newUserID);
 
                 navigator.pop();
 
+                //doesn't work until going to home
                 Get.offAll(
                         () => BottomBar(bottomIndex: 0),
                     transition: Transition.fade
@@ -80,7 +73,10 @@ class _InfoFloatingActionButtonState extends State<InfoFloatingActionButton> {
       child: FittedBox(
         child: FloatingActionButton.extended(
           onPressed: () {
-            _showTextInputDialog(context);
+            widget.connection ?
+            _showTextInputDialog(context)
+              :
+            showMessage(context);
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(100.0),

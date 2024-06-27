@@ -2,11 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:splitshare_v3/API/hive_api.dart';
 import 'package:splitshare_v3/API/notification_sender.dart';
 import 'package:splitshare_v3/Models/manage_crud_operations.dart';
+import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Widgets/loading.dart';
 
+import '../../Models/Hive/Event/hive_event_model.dart';
 import '../../Widgets/bottom_nav_bar.dart';
 
 // ignore: must_be_immutable
@@ -35,6 +37,7 @@ class _CRUDEventState extends State<CRUDEvent> {
   bool _isLoading = false;
   bool amountFLag = false;
   bool providerFlag = false;
+  bool connection = false;
 
   int selectedProviderFlag = -1;
 
@@ -44,6 +47,7 @@ class _CRUDEventState extends State<CRUDEvent> {
   String selectedUserID = '';
   String selectedUserName = '';
   List<String>? userNames = [];
+  List<String>? userImageURLs = [];
   List<String>? userIDs = [];
 
   TextEditingController titleController = TextEditingController();
@@ -58,12 +62,13 @@ class _CRUDEventState extends State<CRUDEvent> {
   }
 
   void loadUsers() async {
-    final prefs = await SharedPreferences.getInstance();
+    connection = await InternetConnectionChecker().hasConnection;
 
-    userNames = prefs.getStringList('userNames');
-    userIDs = prefs.getStringList('userIDs');
-    tripCode = prefs.getString('tripCode');
-    tripName = prefs.getString('tripName')!;
+    userNames = await TripInfoManager().getUserNames();
+    userImageURLs = await TripInfoManager().getUserImageUrls();
+    userIDs = await TripInfoManager().getTripUserIDs();
+    tripCode = await TripInfoManager().getTripCode();
+    tripName = await TripInfoManager().getTripName();
 
     if (widget.title != null) {
       titleController.text = widget.title!;
@@ -104,14 +109,26 @@ class _CRUDEventState extends State<CRUDEvent> {
       messenger.showSnackBar(
           const SnackBar(content: Text('Please Select A Provider')));
     } else {
-      await ManageCRUDOperations().uploadInfo(
-          titleController.text,
-          descriptionController.text,
-          double.parse(amountController.text),
-          selectedUserID,
-          userNames![selectedProviderFlag],
-          widget.docID ?? 'new',
-          tripCode!);
+      if(await InternetConnectionChecker().hasConnection) {
+        await ManageCRUDOperations().uploadInfo(
+            titleController.text,
+            descriptionController.text,
+            double.parse(amountController.text),
+            selectedUserID,
+            userNames![selectedProviderFlag],
+            widget.docID ?? 'new',
+            tripCode!);
+      }
+      else{
+        await ManageCRUDOperations().saveOffline(
+            titleController.text,
+            descriptionController.text,
+            double.parse(amountController.text),
+            selectedUserID,
+            userNames![selectedProviderFlag],
+            widget.docID ?? 'new',
+            tripCode!);
+      }
 
       //Send Notification
       if (await InternetConnectionChecker().hasConnection) {
@@ -132,33 +149,6 @@ class _CRUDEventState extends State<CRUDEvent> {
               "HomePage");
         }
       }
-
-      //upload Data to Firebase
-      /*if(await InternetConnectionChecker().hasConnection){
-          await FirebaseFirestore
-              .instance
-              .collection('trips')
-              .doc(tripCode)
-              .collection('Events')
-              .doc()
-              .set({
-            'title': titleController.text,
-            'description': descriptionController.text,
-            'amount': double.parse(amountController.text),
-            'time': DateTime.now(),
-            'addedBy': FirebaseAuth.instance.currentUser!.uid,
-            'providedBy': selectedUserID,
-          });
-
-          Get.to(
-              () => BottomBar(bottomIndex: 0),
-            transition: Transition.fade
-          );
-      }
-      else{
-
-      }*/
-      //------------------- ELSE WHAT ------------------------------
     }
 
     setState(() {
@@ -171,11 +161,17 @@ class _CRUDEventState extends State<CRUDEvent> {
     Loading loading = Loading();
 
     return PopScope(
-      onPopInvoked: (didPop) {
-        Get.to(() => BottomBar(bottomIndex: 0), transition: Transition.fade);
-      },
+      canPop: false,
       child: Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: true,
+          leading: GestureDetector(
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Get.to(() => BottomBar(bottomIndex: 0), transition: Transition.fade);
+            },
+              child: const Icon(Icons.arrow_back)
+          ),
           actions: [
             //Save Button
             Padding(
@@ -295,14 +291,32 @@ class _CRUDEventState extends State<CRUDEvent> {
                                                         .withOpacity(0.08)),
                                   ),
                                   child: Center(
-                                      child: Text(
-                                    userNames![index],
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: selectedProviderFlag == index
-                                            ? Colors.white
-                                            : Colors.black),
-                                  )),
+                                      child: Row(
+                                        children: [
+                                          //image
+                                          connection && (userImageURLs![index] != '' || userImageURLs![index].isNotEmpty) ?
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(50),
+                                            child: Image.network(userImageURLs![index]),
+                                          ) : const SizedBox(),
+
+                                          //normal space
+                                          connection && (userImageURLs![index] != '' || userImageURLs![index].isNotEmpty) ?
+                                          const SizedBox(width: 5,) : const SizedBox(),
+
+                                          //name
+                                          Text(
+                                            userNames![index],
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: selectedProviderFlag == index
+                                                    ? Colors.white
+                                                    : Colors.black
+                                            ),
+                                          )
+                                        ],
+                                      )
+                                  ),
                                 ),
                               );
                             },
@@ -363,43 +377,63 @@ class _CRUDEventState extends State<CRUDEvent> {
           PopupMenuItem(
             value: "Delete",
             onTap: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text("Confirm Delete"),
-                    content: const Text("Are you sure you want to delete?"),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          // Dismiss the dialog
-                          Navigator.pop(context);
-                        },
-                        child: const Text("Cancel"),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          // Perform the delete action
-                          if (await InternetConnectionChecker().hasConnection) {
-                            ManageCRUDOperations()
-                                .deleteEvent(widget.docID ?? "new", tripCode!);
-                          } else {
-                            messenger.showSnackBar(const SnackBar(
-                                content: Text(
-                                    "Internet Connection Required to 'Delete'")));
-                          }
-                          // Dismiss the dialog
-                          if (mounted) {
+              //if you creating new post, you can't delete
+              if(widget.docID != null){
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text("Confirm Delete"),
+                      content: const Text("Are you sure you want to delete?"),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            // Dismiss the dialog
                             Navigator.pop(context);
-                          }
-                        },
-                        child: const Text("Delete"),
-                      ),
-                    ],
-                  );
-                },
-              );
+                          },
+                          child: const Text("Cancel"),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final navigator = Navigator.pop(context);
+                            // Perform the delete action
+                            if (await InternetConnectionChecker().hasConnection) {
+                              await ManageCRUDOperations().deleteEventFromDB(widget.docID!, tripCode!);
+                              await ManageCRUDOperations().deleteFromSave(widget.docID!);
+                            }
+                            else {
+                              Event event = await HiveApi().getEvent(widget.docID!);
+                              await HiveApi().updateAnEvent(
+                                  event, event.title, event.description, event.amount, event.time,
+                                  event.addedBy, event.providedBy, event.providerName, event.id, 'delete');
+
+
+                            }
+                            // Dismiss the dialog
+                            if (mounted) {
+                              navigator;
+                            }
+
+                            //to home
+                            Get.to(
+                                    () => BottomBar(bottomIndex: 0),
+                                transition: Transition.fade
+                            );
+                          },
+                          child: const Text("Delete"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }
+              //if the docId is null that means creating new post
+              else{
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    duration: Duration(seconds: 3),
+                    content: Text("The post hasn't been created yet"))
+                );
+              }
             },
             child: const Row(
               children: [

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hive/hive.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Screens/Home/home_appbar.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
+import '../../Models/Hive/Event/hive_event_model.dart';
 
 class CalculationScreen extends StatefulWidget {
   const CalculationScreen({super.key});
@@ -19,17 +21,13 @@ class _CalculationScreenState extends State<CalculationScreen> {
   double total = 0.0;
   double perPerson = 0.0;
 
-  List<String> titles = [];
-  List<String> descriptions = [];
   List<String> amounts = [];
-  List<String> times = [];
   List<String> providerNames = [];
   List<String> providerIDs = [];
-  List<String> docIDs = [];
-  List<String> isChanged = [];
+
   List<String> userNames = [];
   List<String> userIDs = [];
-  List<int> searchIndexes = [];
+  List<String> userImageUrls = [];
 
   List<double> totalOfIndividuals = [];
   List<String> splitLogs = [];
@@ -38,7 +36,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
   void initState() {
     _isLoading = true;
     checkConnection();
-    getDataFromSharedPreferences();
+    getSavedData();
     super.initState();
   }
 
@@ -52,53 +50,26 @@ class _CalculationScreenState extends State<CalculationScreen> {
     }
   }
 
-  Future<void> getDataFromSharedPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> getSavedData() async {
+    amounts.clear();
+    providerIDs.clear();
+    providerNames.clear();
 
-    userNames = prefs.getStringList('userNames')!;
-    userIDs = prefs.getStringList('userIDs')!;
-    providerNames = prefs.getStringList('providerNames')!;
-    isChanged = prefs.getStringList('isChanged')!;
-
-    titles = prefs.getStringList('titles')!;
-    descriptions = prefs.getStringList('descriptions')!;
-    amounts = prefs.getStringList('amounts')!;
-    times = prefs.getStringList('times')!;
-    providerIDs = prefs.getStringList('providerIDs')!;
-    docIDs = prefs.getStringList('docIDs')!;
-
-// Create a list of Map entries to associate each item with its time
-    List<Map<String, dynamic>> itemsWithTimes = [];
-
-    for (int i = 0; i < times.length; i++) {
-      itemsWithTimes.add({
-        'title': titles[i],
-        'description': descriptions[i],
-        'amount': amounts[i],
-        'time': DateTime.parse(times[i]),
-        'providerName': providerNames[i],
-        'providerID': providerIDs[i],
-        'docID': docIDs[i],
-        'isChanged': isChanged[i],
-      });
+    //load all the event data
+    final eventBox = Hive.box<Event>('events');
+    final events = eventBox.values.toList();
+    for (var event in events) {
+      if(event.action != 'delete'){
+        amounts.add(event.amount.toString());
+        providerIDs.add(event.providedBy);
+        providerNames.add(event.providerName);
+      }
     }
 
-// Sort the list by time
-    itemsWithTimes.sort((a, b) => b['time'].compareTo(a['time']));
-
-// Update the lists with sorted data
-    titles = itemsWithTimes.map((item) => item['title'].toString()).toList();
-    descriptions =
-        itemsWithTimes.map((item) => item['description'].toString()).toList();
-    amounts = itemsWithTimes.map((item) => item['amount'].toString()).toList();
-    times = itemsWithTimes.map((item) => item['time'].toString()).toList();
-    providerNames =
-        itemsWithTimes.map((item) => item['providerName'].toString()).toList();
-    providerIDs =
-        itemsWithTimes.map((item) => item['providerID'].toString()).toList();
-    docIDs = itemsWithTimes.map((item) => item['docID'].toString()).toList();
-    isChanged =
-        itemsWithTimes.map((item) => item['isChanged'].toString()).toList();
+    //load user data
+    userIDs = await TripInfoManager().getTripUserIDs();
+    userNames = await TripInfoManager().getUserNames();
+    userImageUrls = await TripInfoManager().getUserImageUrls();
 
     getTotal();
 
@@ -119,7 +90,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
     //total of individual
     double tempTotal = 0.0;
     for (int i = 0; i < userNames.length; i++) {
-      for (int j = 0; j < titles.length; j++) {
+      for (int j = 0; j < amounts.length; j++) {
         if (userIDs[i] == providerIDs[j]) {
           tempTotal = tempTotal + double.parse(amounts[j]);
         }
@@ -280,21 +251,15 @@ class _CalculationScreenState extends State<CalculationScreen> {
           child: Column(
             children: [
               ListTile(
-                onTap: () {
-                  /*Get.to(
-                      () => CRUDEvent(
-                    title: titles[index],
-                    amount: amounts[index].toString(),
-                    description: descriptions[index],
-                    provider: providerNames[index],
-                    docID: docIDs[index],
+                leading: Visibility(
+                  visible: connection && userImageUrls[index] != '' || userImageUrls[index].isNotEmpty,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(50),
+                    child: SizedBox(
+                      height: 35,
+                      child: Image.network(userImageUrls[index]),
+                    ),
                   ),
-                  transition: Transition.fade
-              );*/
-                },
-                leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
-                  child: const Icon(Icons.person),
                 ),
                 title: Text(
                   userNames[index],
@@ -316,6 +281,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
+
               Card(
                 elevation: 0,
                 shape: const RoundedRectangleBorder(
@@ -336,26 +302,72 @@ class _CalculationScreenState extends State<CalculationScreen> {
                           .indexOf(splitLogs[splitLogIndex].substring(0, 28));
 
                       String userName = userNames[indexOfUserID];
+                      String imageUrl = userImageUrls[indexOfUserID];
 
                       String amount = splitLogs[splitLogIndex]
                           .substring(68, splitLogs[splitLogIndex].length);
 
                       return Padding(
                         padding: const EdgeInsets.all(10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              "$userName will give : $amount",
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  overflow: TextOverflow.clip),
+
+                            Visibility(
+                              visible: true,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(50),
+                                child: SizedBox(
+                                  height: 17.5,
+                                  child: connection && imageUrl != '' || imageUrl.isNotEmpty ?
+                                  Image.network(imageUrl)
+                                      :
+                                  Icon(
+                                    Icons.person,
+                                    color: Colors.white.withOpacity(0.6),
+                                  )
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 5,),
+
+
+                            Expanded(
+                              child: Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: "$userName ",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const TextSpan(
+                                      text: "will give ",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.normal,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: ": $amount",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             )
+
                           ],
                         ),
                       );
-                    } else {
+                    }
+                    else {
                       return const SizedBox();
                     }
                   },

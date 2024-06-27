@@ -2,10 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import 'package:splitshare_v3/API/notification_api.dart';
 import 'package:splitshare_v3/API/user_api.dart';
-import 'package:splitshare_v3/Models/global_variables.dart';
 import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Screens/My%20Trips/mytrip_appbar.dart';
 import 'package:splitshare_v3/Screens/My%20Trips/mytrip_floatingbutton.dart';
@@ -257,9 +257,10 @@ class _MyTripsState extends State<MyTrips> {
           child: ListTile(
             onTap: () async {
 
-              await TripInfoManager().saveTripInfo(tripCodes[tripNames.indexOf(matchedTripNames[index])]);
+              await TripInfoManager().loadAndSaveTripInfo(tripCodes[tripNames.indexOf(matchedTripNames[index])]);
 
-              firstLoadTripCode = tripCodes[tripNames.indexOf(matchedTripNames[index])];
+              var box = Hive.box('tripInfo');
+              box.put('tripCode', tripCodes[tripNames.indexOf(matchedTripNames[index])]);
 
               Get.to(
                       () => BottomBar(bottomIndex: 0),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:splitshare_v3/API/auth_service.dart';
-import 'package:splitshare_v3/Screens/Home/home.dart';
 import 'package:splitshare_v3/Screens/My%20Trips/my_trips.dart';
 
 class LoginPage extends StatefulWidget {
@@ -29,19 +28,12 @@ class _LoginPageState extends State<LoginPage> {
               const Expanded(child: SizedBox()),
 
               //SPLITSHARE
-              GestureDetector(
-                onTap: () {
-                  Get.to(
-                      () => const HomePage(),
-                  );
-                },
-                child: const Text(
-                  'SPLITSHARE',
-                  style: TextStyle(
-                    fontFamily: 'Anurati',
-                    fontSize: 35,
-                    letterSpacing: 3,
-                  ),
+              const Text(
+                'SPLITSHARE',
+                style: TextStyle(
+                  fontFamily: 'Anurati',
+                  fontSize: 35,
+                  letterSpacing: 3,
                 ),
               ),
 
