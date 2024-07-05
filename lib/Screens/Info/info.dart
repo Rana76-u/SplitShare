@@ -12,6 +12,7 @@ import 'package:splitshare_v3/Screens/Home/home_appbar.dart';
 import 'package:splitshare_v3/Screens/Info/info_floating.dart';
 import 'package:splitshare_v3/Screens/My%20Trips/my_trips.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
+import 'package:splitshare_v3/Widgets/snack_bar.dart';
 import '../../Models/Hive/Event/hive_event_model.dart';
 import '../../Models/Hive/User/hive_user_model.dart';
 import '../../Models/trip_info_manager.dart';
@@ -85,6 +86,25 @@ class _InfoPageState extends State<InfoPage> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  Future<void> _handleRefresh() async {
+    final navigator = Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            BottomBar(bottomIndex: 2),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return child;
+        },
+      ),
+    );
+
+    // Simulate a delay for the refresh indicator
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Reload the same page by pushing a new instance onto the stack
+    navigator;
   }
 
   void parseTimestampString(String timestampString) {
@@ -254,12 +274,19 @@ class _InfoPageState extends State<InfoPage> {
                         "Trip Name",
                         style: TextStyle(fontSize: 16, color: Colors.grey),
                       ),
-                      Text(
-                        tripName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 25,
-                            color: Colors.purple),
+
+                      Row(
+                        children: [
+                          Text(
+                            tripName,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 25,
+                                color: Colors.purple),
+                          ),
+
+                          editTripWidget()
+                        ],
                       ),
 
                       //Trip info & TripCode
@@ -277,12 +304,72 @@ class _InfoPageState extends State<InfoPage> {
                       userBuilder(),
 
                       //version
-                      version()
+                      version(),
+
+                      const SizedBox(height: 150,)
                     ],
                   ),
                 ),
               ),
       ),
+    );
+  }
+
+  Widget editTripWidget() {
+    return IconButton(
+      onPressed: () {
+        if(connection){
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              TextEditingController tripNameController = TextEditingController();
+              tripNameController.text = tripName;
+
+              return AlertDialog(
+                title: const Text('Edit Trip'),
+                content: TextField(
+                  controller: tripNameController,
+                  decoration: const InputDecoration(hintText: "Enter trip details"),
+                ),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final navigator = Navigator.of(context);
+                      await FirebaseFirestore.instance.collection('trips')
+                          .doc(tripCode)
+                          .update({
+                        'tripName': tripNameController.text
+                      });
+
+                      final tripBox = Hive.box('tripInfo');
+                      await tripBox.put('tripName', tripNameController.text);
+
+                      // Dismiss the dialogue
+                      navigator.pop();
+
+                      // updates the page
+                      _handleRefresh();
+                    },
+                    child: const Text('Submit'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+        else{
+          showMessage(context);
+        }
+
+      },
+      icon: const Icon(Icons.edit),
+      color: Colors.deepPurple,
     );
   }
 

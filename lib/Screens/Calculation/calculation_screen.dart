@@ -7,6 +7,10 @@ import 'package:splitshare_v3/Screens/Home/home_appbar.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
 import '../../Models/Hive/Event/hive_event_model.dart';
 
+// Todo
+/*The list represents the calculation of the total spending of each participant and
+below each participant's list shows how much money that participant will get from others.*/
+
 class CalculationScreen extends StatefulWidget {
   const CalculationScreen({super.key});
 
@@ -186,9 +190,15 @@ class _CalculationScreenState extends State<CalculationScreen> {
                   child: Column(
                     children: [
                       spendingCard(),
-                      const SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 5,),
+                      const Text("The list represents the calculation of the total spending of each participant and "
+                          "below each participant's list shows how much money that participant will get from others.",
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
+                        fontSize: 11
+                      ),),
+                      const SizedBox(height: 5,),
                       individualSpending()
                     ],
                   ),
@@ -289,7 +299,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
                       bottomRight: Radius.circular(10),
                       bottomLeft: Radius.circular(10)),
                 ),
-                color: Colors.blueGrey.shade300,
+                color: const Color(0xFF023047),
                 child: ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),

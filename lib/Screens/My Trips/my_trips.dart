@@ -257,10 +257,18 @@ class _MyTripsState extends State<MyTrips> {
           child: ListTile(
             onTap: () async {
 
+              setState(() {
+                _isLoading = true;
+              });
+
               await TripInfoManager().loadAndSaveTripInfo(tripCodes[tripNames.indexOf(matchedTripNames[index])]);
 
               var box = Hive.box('tripInfo');
               box.put('tripCode', tripCodes[tripNames.indexOf(matchedTripNames[index])]);
+
+              setState(() {
+                _isLoading = false;
+              });
 
               Get.to(
                       () => BottomBar(bottomIndex: 0),

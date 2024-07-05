@@ -57,8 +57,8 @@ class _BottomBarState extends State<BottomBar> {
             title: const Text('Splits'),
           ),
           FlashyTabBarItem(
-            icon: const Icon(Icons.info_outline_rounded),
-            title: const Text('Info'),
+            icon: const Icon(Icons.group), //location_on
+            title: const Text('Trip'),
           ),
         ],
       ),

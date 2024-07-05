@@ -14,7 +14,7 @@ import 'Models/Hive/User/hive_user_model.dart';
 
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  await WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform
   );
@@ -22,31 +22,35 @@ void main() async {
   await FirebaseApi().initNotifications();
 
   await Hive.initFlutter();
-  Hive.registerAdapter(EventAdapter());
+  // Check if the box is already open before opening it
+  //Hive.registerAdapter(EventAdapter());
   if (!Hive.isBoxOpen('events')) {
+    Hive.registerAdapter(EventAdapter());
     await Hive.openBox<Event>('events');
   }
-  Hive.registerAdapter(UserAdapter());
+
   if (!Hive.isBoxOpen('users')) {
+    Hive.registerAdapter(UserAdapter());
     await Hive.openBox<UserClass>('users');
   }
-    // Check if the box is already open before opening it
+
   if (!Hive.isBoxOpen('tripInfo')) {
     await Hive.openBox('tripInfo');
   }
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  Widget screenNavigator() {
+  Widget screenNavigator(){
     return FutureBuilder(
       future: TripInfoManager().getTripCode(),
       builder: (context, snapshot) {
-        if (FirebaseAuth.instance.currentUser != null &&
+        if (FirebaseAuth.instance.currentUser != null && //!.uid.isNotEmpty
             snapshot.connectionState == ConnectionState.done &&
-            snapshot.data!.isNotEmpty) {
+            snapshot.data?.length != 0) { //isNotEmpty ?.length != 0
           return BottomBar(bottomIndex: 0); //Fix 0
         } else if (FirebaseAuth.instance.currentUser != null) {
           return const MyTrips();

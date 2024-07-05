@@ -60,13 +60,13 @@ class _HomePageState extends State<HomePage> {
     super.initState();
   } //Done
 
-  void setTripCode() {
-    var tripBox = Hive.box('tripInfo');
-    tripCode = tripBox.get('tripCode');
+  void setTripCode() async {
+    var tripBox = await Hive.box('tripInfo');
+    tripCode = await tripBox.get('tripCode');
   } //Done
 
   void startConnectionCheckTimer() {
-    // Create a timer that checks the connection status every 2 seconds.
+    // Create a timer that checks the connection status every 0.5 seconds.
     connectionTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (mounted) {
         checkConnection();
@@ -195,14 +195,8 @@ class _HomePageState extends State<HomePage> {
     navigator;
   } //Done
 
+  // todo
   Future<void> backupData() async {
-    final messenger = ScaffoldMessenger.of(context);
-
-    //Message - Backing Up Content
-    messenger.showSnackBar(const SnackBar(
-        duration: Duration(milliseconds: 500),
-        content: Text('Backing up content.')));
-
     //get all the offline event and check if the action says 'update' or not
     final box = Hive.box<Event>('events');
     final events = box.values.toList();
@@ -230,10 +224,6 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    //Message - Backup Complete
-    messenger.showSnackBar(const SnackBar(
-        duration: Duration(milliseconds: 500),
-        content: Text('Backup Complete')));
   } //On Test
 
 
@@ -305,7 +295,7 @@ class _HomePageState extends State<HomePage> {
                       //Problem is here cause the connection variable is always set to true initially
                       //and the connection checker timer calls himself after 2s
                       //Todo Temporarily I set connection to false initially - if it works then ok
-                      if (connection) ...[
+                      /*if (connection) ...[
                         SingleChildScrollView(
                           child: Padding(
                               padding:
@@ -320,7 +310,14 @@ class _HomePageState extends State<HomePage> {
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: loadItemFromHive()
                         )
-                      ],
+                      ],*/
+
+                      Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: connection
+                              ? loadItemFromDatabase() // Load from Firebase when online
+                              : loadItemFromHive() // Load from Hive when offline
+                      ),
 
                       const SizedBox(
                         height: 100,

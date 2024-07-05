@@ -60,9 +60,9 @@ class ManageCRUDOperations {
   async {
     //if OLD data edited
     if(docID != 'new'){
-      Event event = await HiveApi().getEvent(docID!);
+      Event? event = await HiveApi().getEvent(docID!);
       HiveApi().updateAnEvent(
-          event, title, description, amount,
+          event!, title, description, amount,
           event.time, event.addedBy,
           providerID, providerName, docID, 'update');
     }

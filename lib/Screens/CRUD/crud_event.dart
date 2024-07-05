@@ -402,12 +402,10 @@ class _CRUDEventState extends State<CRUDEvent> {
                               await ManageCRUDOperations().deleteFromSave(widget.docID!);
                             }
                             else {
-                              Event event = await HiveApi().getEvent(widget.docID!);
+                              Event? event = await HiveApi().getEvent(widget.docID!);
                               await HiveApi().updateAnEvent(
-                                  event, event.title, event.description, event.amount, event.time,
+                                  event!, event.title, event.description, event.amount, event.time,
                                   event.addedBy, event.providedBy, event.providerName, event.id, 'delete');
-
-
                             }
                             // Dismiss the dialog
                             if (mounted) {
