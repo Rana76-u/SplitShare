@@ -14,7 +14,7 @@ import 'Models/Hive/User/hive_user_model.dart';
 
 
 void main() async {
-  await WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform
   );
@@ -50,8 +50,8 @@ class MyApp extends StatelessWidget {
       builder: (context, snapshot) {
         if (FirebaseAuth.instance.currentUser != null && //!.uid.isNotEmpty
             snapshot.connectionState == ConnectionState.done &&
-            snapshot.data?.length != 0) { //isNotEmpty ?.length != 0
-          return BottomBar(bottomIndex: 0); //Fix 0
+            snapshot.data!.isNotEmpty) { //isNotEmpty ?.length != 0
+          return BottomBar(bottomIndex: 0);
         } else if (FirebaseAuth.instance.currentUser != null) {
           return const MyTrips();
         } else {

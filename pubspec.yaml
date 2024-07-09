@@ -45,7 +45,6 @@ dependencies:
   icons_plus: ^4.0.0
   internet_connection_checker: ^1.0.0+1
   intl: ^0.18.1
-  lottie: ^2.7.0
   qr_flutter: ^4.1.0
   share_plus: ^7.2.1
   mobile_scanner: ^3.5.5
