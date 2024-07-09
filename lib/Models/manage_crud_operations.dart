@@ -5,6 +5,7 @@ import 'package:hive/hive.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:splitshare_v3/API/hive_api.dart';
 import 'package:splitshare_v3/Models/Hive/Event/hive_event_model.dart';
+import '../API/user_api.dart';
 import '../Widgets/bottom_nav_bar.dart';
 
 class ManageCRUDOperations {
@@ -16,7 +17,7 @@ class ManageCRUDOperations {
 
     //if internet is connected
       //update old data
-     if(docID != 'new'){
+     if(!docID!.contains('new')){
        await FirebaseFirestore
            .instance
            .collection('trips')
@@ -49,18 +50,18 @@ class ManageCRUDOperations {
      }
      //Send Notification
 
-    Get.to(
+/*    Get.to(
             () => BottomBar(bottomIndex: 0),
         transition: Transition.fade
-    );
+    );*/
   }
 
   saveOffline(String title, String description, double amount,
       String providerID, String providerName, String? docID, String tripCode)
   async {
     //if OLD data edited
-    if(docID != 'new'){
-      Event? event = await HiveApi().getEvent(docID!);
+    if(!docID!.contains('new')){ // != 'new'
+      Event? event = await HiveApi().getEvent(docID);
       HiveApi().updateAnEvent(
           event!, title, description, amount,
           event.time, event.addedBy,
@@ -68,9 +69,10 @@ class ManageCRUDOperations {
     }
     //if NEW data
     else{
+      String newID = UserApi().generateUID();
       //Create Event object
       Event event = Event(
-          id: 'new',
+          id: 'new - $newID',
           title: title,
           description: description,
           amount: amount,

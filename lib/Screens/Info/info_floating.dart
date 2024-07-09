@@ -1,5 +1,9 @@
+
+
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:splitshare_v3/API/check_connection.dart';
 import 'package:splitshare_v3/API/user_api.dart';
 import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Widgets/snack_bar.dart';
@@ -7,8 +11,10 @@ import 'package:splitshare_v3/Widgets/snack_bar.dart';
 import '../../Widgets/bottom_nav_bar.dart';
 
 class InfoFloatingActionButton extends StatefulWidget {
-  final bool connection;
-  const InfoFloatingActionButton({super.key, required this.connection});
+  //final bool connection;
+  const InfoFloatingActionButton({super.key,
+    //required this.connection
+  });
 
   @override
   State<InfoFloatingActionButton> createState() => _InfoFloatingActionButtonState();
@@ -72,11 +78,14 @@ class _InfoFloatingActionButtonState extends State<InfoFloatingActionButton> {
       width: 200,
       child: FittedBox(
         child: FloatingActionButton.extended(
-          onPressed: () {
-            widget.connection ?
-            _showTextInputDialog(context)
-              :
-            showMessage(context);
+          onPressed: () async {
+            if(await checkConnection()){
+              _showTextInputDialog(context);
+            }
+            else{
+              connection = false;
+              showMessage(context);
+            }
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(100.0),

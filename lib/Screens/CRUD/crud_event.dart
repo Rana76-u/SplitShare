@@ -1,13 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:splitshare_v3/API/check_connection.dart';
 import 'package:splitshare_v3/API/hive_api.dart';
 import 'package:splitshare_v3/API/notification_sender.dart';
 import 'package:splitshare_v3/Models/manage_crud_operations.dart';
 import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Widgets/loading.dart';
 
+import '../../API/user_api.dart';
 import '../../Models/Hive/Event/hive_event_model.dart';
 import '../../Widgets/bottom_nav_bar.dart';
 
@@ -37,7 +40,7 @@ class _CRUDEventState extends State<CRUDEvent> {
   bool _isLoading = false;
   bool amountFLag = false;
   bool providerFlag = false;
-  bool connection = false;
+  //bool connection = false;
 
   int selectedProviderFlag = -1;
 
@@ -62,7 +65,7 @@ class _CRUDEventState extends State<CRUDEvent> {
   }
 
   void loadUsers() async {
-    connection = await InternetConnectionChecker().hasConnection;
+    connection = await checkConnection();
 
     userNames = await TripInfoManager().getUserNames();
     userImageURLs = await TripInfoManager().getUserImageUrls();
@@ -90,6 +93,8 @@ class _CRUDEventState extends State<CRUDEvent> {
       _isLoading = true;
     });
 
+    String newID = UserApi().generateUID();
+
     final messenger = ScaffoldMessenger.of(context);
     //final prefs = await SharedPreferences.getInstance();
 
@@ -101,14 +106,16 @@ class _CRUDEventState extends State<CRUDEvent> {
       });
 
       messenger.showSnackBar(const SnackBar(content: Text('Input Amount*')));
-    } else if (selectedUserID == '') {
+    }
+    else if (selectedUserID == '') {
       setState(() {
         providerFlag = true;
       });
 
       messenger.showSnackBar(
           const SnackBar(content: Text('Please Select A Provider')));
-    } else {
+    }
+    else {
       if(await InternetConnectionChecker().hasConnection) {
         await ManageCRUDOperations().uploadInfo(
             titleController.text,
@@ -116,7 +123,7 @@ class _CRUDEventState extends State<CRUDEvent> {
             double.parse(amountController.text),
             selectedUserID,
             userNames![selectedProviderFlag],
-            widget.docID ?? 'new',
+            widget.docID ?? 'new - $newID',
             tripCode!);
       }
       else{
@@ -126,34 +133,48 @@ class _CRUDEventState extends State<CRUDEvent> {
             double.parse(amountController.text),
             selectedUserID,
             userNames![selectedProviderFlag],
-            widget.docID ?? 'new',
+            widget.docID ?? 'new - $newID',
             tripCode!);
       }
 
-      //Send Notification
+      // Send Notification
       if (await InternetConnectionChecker().hasConnection) {
         String token = '';
 
         for (int i = 0; i < userIDs!.length; i++) {
-          final tokenSnapshot = await FirebaseFirestore.instance
-              .collection('userTokens')
-              .doc(userIDs![i])
-              .get();
+          try {
+            final tokenSnapshot = await FirebaseFirestore.instance
+                .collection('userTokens')
+                .doc(userIDs![i])
+                .get();
 
-          token = tokenSnapshot.get('token');
+            // Check if the document exists
+            if (tokenSnapshot.exists) {
+              token = tokenSnapshot.get('token');
 
-          await SendNotification.toSpecific(
-              "${userNames![selectedProviderFlag]} To $tripName",
-              titleController.text,
-              token,
-              "HomePage");
+              await SendNotification.toSpecific(
+                  "${userNames![selectedProviderFlag]} To $tripName",
+                  titleController.text,
+                  token,
+                  "HomePage"
+              );
+            }
+          } catch (e) {
+            // Handle the exception if needed
+            if (kDebugMode) {
+              print('User ID ${userIDs![i]} does not exist in userTokens collection');
+            }
+          }
         }
       }
+
     }
 
     setState(() {
       _isLoading = false;
     });
+
+    Get.to(() => BottomBar(bottomIndex: 0), transition: Transition.fade);
   }
 
   @override
@@ -367,12 +388,6 @@ class _CRUDEventState extends State<CRUDEvent> {
       padding: const EdgeInsets.only(right: 20),
       child: PopupMenuButton(
         initialValue: "Delete",
-        onSelected: (String value) {
-          // Handle the selected value here
-          if (value == "Delete") {
-            // Add your delete logic here
-          }
-        },
         itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
           PopupMenuItem(
             value: "Delete",
@@ -396,6 +411,13 @@ class _CRUDEventState extends State<CRUDEvent> {
                         TextButton(
                           onPressed: () async {
                             final navigator = Navigator.pop(context);
+                            setState(() {
+                              _isLoading = true;
+                            });
+                            // Dismiss the dialog
+                            if (mounted) {
+                              navigator;
+                            }
                             // Perform the delete action
                             if (await InternetConnectionChecker().hasConnection) {
                               await ManageCRUDOperations().deleteEventFromDB(widget.docID!, tripCode!);
@@ -407,11 +429,10 @@ class _CRUDEventState extends State<CRUDEvent> {
                                   event!, event.title, event.description, event.amount, event.time,
                                   event.addedBy, event.providedBy, event.providerName, event.id, 'delete');
                             }
-                            // Dismiss the dialog
-                            if (mounted) {
-                              navigator;
-                            }
 
+                            setState(() {
+                              _isLoading = false;
+                            });
                             //to home
                             Get.to(
                                     () => BottomBar(bottomIndex: 0),

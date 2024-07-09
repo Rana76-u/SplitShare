@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
+import 'package:splitshare_v3/API/clear_boxes.dart';
 import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
 import 'package:splitshare_v3/Widgets/loading.dart';
@@ -120,6 +121,8 @@ class _CreateTripState extends State<CreateTrip> {
                     final messenger = ScaffoldMessenger.of(context);
 
                     await createTrip();
+
+                    await clearAllTheBoxes();
 
                     //Save to Prefs
                     /*SharedPreferences prefs = await SharedPreferences.getInstance();

@@ -1,10 +1,12 @@
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:splitshare_v3/Models/trip_info_manager.dart';
+import 'package:splitshare_v3/Screens/Calculation/calculation_api.dart';
 import 'package:splitshare_v3/Screens/Home/home_appbar.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
+import '../../API/check_connection.dart';
 import '../../Models/Hive/Event/hive_event_model.dart';
 
 // Todo
@@ -20,41 +22,51 @@ class CalculationScreen extends StatefulWidget {
 
 class _CalculationScreenState extends State<CalculationScreen> {
   bool _isLoading = false;
-  bool connection = false;
+  //bool connection = false;
 
   double total = 0.0;
   double perPerson = 0.0;
 
-  List<String> amounts = [];
+  List<double> amounts = [];
   List<String> providerNames = [];
   List<String> providerIDs = [];
 
-  List<String> userNames = [];
-  List<String> userIDs = [];
-  List<String> userImageUrls = [];
 
-  List<double> totalOfIndividuals = [];
+
+
+  //uid, uname
+  Map<String, String> userNames = {};
+  //uid, url
+  Map<String, String> userImageUrls = {};
+  //uid, amount
+  Map<String, double> totalOfIndividuals = {};
+
+  //uid, balance
+  Map<String, double> biggestReceivers = {};
+  Map<String, double> biggestGivers = {};
+
   List<String> splitLogs = [];
 
   @override
   void initState() {
     _isLoading = true;
-    checkConnection();
+    setConnection();
     getSavedData();
     super.initState();
   }
 
-  Future<void> checkConnection() async {
-    bool hasConnection = await InternetConnectionChecker().hasConnection;
-    if (hasConnection != connection) {
-      // The connection status has changed.
-      setState(() {
-        connection = hasConnection;
-      });
-    }
+  void setConnection() async {
+    bool connectionStatus = await checkConnection();
+    setState(() {
+      connection = connectionStatus;
+    });
   }
 
   Future<void> getSavedData() async {
+    List<String> tempUserNames = [];
+    List<String> tempUserIDs = [];
+    List<String> tempUserImageUrls = [];
+
     amounts.clear();
     providerIDs.clear();
     providerNames.clear();
@@ -64,16 +76,23 @@ class _CalculationScreenState extends State<CalculationScreen> {
     final events = eventBox.values.toList();
     for (var event in events) {
       if(event.action != 'delete'){
-        amounts.add(event.amount.toString());
+        amounts.add(event.amount);
         providerIDs.add(event.providedBy);
         providerNames.add(event.providerName);
       }
     }
 
-    //load user data
-    userIDs = await TripInfoManager().getTripUserIDs();
-    userNames = await TripInfoManager().getUserNames();
-    userImageUrls = await TripInfoManager().getUserImageUrls();
+    //load user data from Hive
+    tempUserIDs = await TripInfoManager().getTripUserIDs();
+    tempUserNames = await TripInfoManager().getUserNames();
+    tempUserImageUrls = await TripInfoManager().getUserImageUrls();
+
+    //assign them in MAP
+    for(int i=0; i<tempUserIDs.length; i++){
+      userNames[tempUserIDs[i]] = tempUserNames[i];
+      userImageUrls[tempUserIDs[i]] = tempUserImageUrls[i];
+    }
+
 
     getTotal();
 
@@ -85,7 +104,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
   void getTotal() {
     //total Spending
     for (int i = 0; i < amounts.length; i++) {
-      total = total + double.parse(amounts[i]);
+      total = total + amounts[i];
     }
 
     //Per Person
@@ -95,19 +114,73 @@ class _CalculationScreenState extends State<CalculationScreen> {
     double tempTotal = 0.0;
     for (int i = 0; i < userNames.length; i++) {
       for (int j = 0; j < amounts.length; j++) {
-        if (userIDs[i] == providerIDs[j]) {
-          tempTotal = tempTotal + double.parse(amounts[j]);
+        if (userNames.keys.elementAt(i) == providerIDs[j]) {
+          tempTotal = tempTotal + amounts[j];
         }
       }
-      totalOfIndividuals.add(tempTotal);
+      //totalOfIndividuals.add(tempTotal);
+      totalOfIndividuals[userNames.keys.elementAt(i)] = tempTotal;
+      if(tempTotal >= perPerson){
+        biggestReceivers[userNames.keys.elementAt(i)] = tempTotal;
+      }
+      else{
+        biggestGivers[userNames.keys.elementAt(i)] = tempTotal;
+      }
       tempTotal = 0.0;
     }
 
     //getSplitterLog();
-    splitCost(totalOfIndividuals);
+    ///splitCost(totalOfIndividuals);
+    biggestTheorem();
   }
 
-  void getSplitterLog() {
+  void biggestTheorem() {
+
+    biggestReceivers = CalculationAPI().sortAMap(biggestReceivers, perPerson);
+    biggestGivers = CalculationAPI().sortAMap(biggestGivers, perPerson);
+
+    int receiversFlagIndex = 0;
+    int giversFlagIndex = 0;
+
+    //until the i is not> the length of the list of biggest Receivers
+    while(giversFlagIndex < biggestGivers.keys.length && receiversFlagIndex < biggestReceivers.keys.length){
+      double receiverBalance = biggestReceivers.values.elementAt(receiversFlagIndex); //2368
+      double giverBalance = biggestGivers.values.elementAt(giversFlagIndex); //2409
+
+      //get uid of receiver and giver
+      String receiverUid = biggestReceivers.keys.elementAt(receiversFlagIndex);
+      String giverUid = biggestGivers.keys.elementAt(giversFlagIndex);
+
+      double remainingAmount = receiverBalance.floorToDouble() - giverBalance.floorToDouble();
+
+      // > 0 means Receiver still owns money, and biggest giver has giver all his money
+      if(remainingAmount > 0){
+        //Set Biggest Receiver balance = remaining amount;
+        biggestReceivers[receiverUid] = remainingAmount; //2368
+
+        //giver will give receiver it's full balance
+        splitLogs.add('$giverUid will give $receiverUid : ${giverBalance.toStringAsFixed(1)} Tk');
+
+        //now, biggest giver has 0 money
+        biggestGivers[giverUid] = 0;
+
+        //Shift Biggest Giver to next person
+        giversFlagIndex++;
+      }
+      // < 0 means Receiver money fulfilled, and biggest giver has remaining money
+      else{
+        //giver will give receiver it's (Givers Original Balance - remaining amount)
+        splitLogs.add('$giverUid will give $receiverUid : ${(giverBalance - remainingAmount.abs()).toStringAsFixed(1)} Tk'); //2409 - 41
+
+        biggestReceivers[receiverUid] = 0;
+        biggestGivers[giverUid] = remainingAmount.abs(); //41
+
+        receiversFlagIndex++;
+      }
+    }
+  }
+
+/*  void getSplitterLog() {
     List<double> differences = [];
 
     //Extracts the differences between individual total and per person cost
@@ -140,9 +213,9 @@ class _CalculationScreenState extends State<CalculationScreen> {
         }
       }
     }*/
-  }
+  }*/
 
-  void splitCost(List<double> expenses) {
+ /*void splitCost(List<double> expenses) {
     // Initialize a list to track the balance for each person
     List<double> balance = List.filled(expenses.length, 0);
 
@@ -155,6 +228,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
     for (int i = 0; i < expenses.length; i++) {
       for (int j = 0; j < expenses.length; j++) {
         if (i != j) {
+          //user1 is in negative and user2 is in positive
           if (balance[i] < 0 && balance[j] > 0) {
             double amount =
                 balance[i].abs() < balance[j] ? balance[i].abs() : balance[j];
@@ -167,7 +241,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
         }
       }
     }
-  }
+  }*/
 
   @override
   Widget build(BuildContext context) {
@@ -176,8 +250,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
         Get.to(() => BottomBar(bottomIndex: 0), transition: Transition.fade);
       },
       child: Scaffold(
-        appBar: HomeAppBar(
-          connected: connection,
+        appBar: const HomeAppBar(
           isLoading: false,
         ),
         body: _isLoading
@@ -262,28 +335,28 @@ class _CalculationScreenState extends State<CalculationScreen> {
             children: [
               ListTile(
                 leading: Visibility(
-                  visible: connection && userImageUrls[index] != '' || userImageUrls[index].isNotEmpty,
+                  visible: connection && userImageUrls.values.elementAt(index) != '' || userImageUrls.values.elementAt(index).isNotEmpty,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(50),
                     child: SizedBox(
                       height: 35,
-                      child: Image.network(userImageUrls[index]),
+                      child: Image.network(userImageUrls.values.elementAt(index)),
                     ),
                   ),
                 ),
                 title: Text(
-                  userNames[index],
+                  userNames.values.elementAt(index),
                   style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       overflow: TextOverflow.ellipsis),
                 ),
                 trailing: Text(
-                  '${totalOfIndividuals[index]}/-',
+                  '${totalOfIndividuals.values.elementAt(index)}/-',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 25,
                       overflow: TextOverflow.ellipsis,
-                      color: totalOfIndividuals[index] >= perPerson
+                      color: totalOfIndividuals.values.elementAt(index) >= perPerson
                           ? Colors.green
                           : Colors.redAccent),
                 ),
@@ -306,13 +379,11 @@ class _CalculationScreenState extends State<CalculationScreen> {
                   itemCount: splitLogs.length,
                   itemBuilder: (context, splitLogIndex) {
                     if (splitLogs[splitLogIndex]
-                        .contains("will give ${userIDs[index]}")) {
-                      //index of userId from splitLogs(list of givers text which contains userId)
-                      int indexOfUserID = userIDs
-                          .indexOf(splitLogs[splitLogIndex].substring(0, 28));
+                        .contains("will give ${userNames.keys.elementAt(index)}")) {
 
-                      String userName = userNames[indexOfUserID];
-                      String imageUrl = userImageUrls[indexOfUserID];
+                      String userName = userNames[splitLogs[splitLogIndex].substring(0, 28)]!;
+
+                      String imageUrl = userImageUrls[splitLogs[splitLogIndex].substring(0, 28)]!;
 
                       String amount = splitLogs[splitLogIndex]
                           .substring(68, splitLogs[splitLogIndex].length);

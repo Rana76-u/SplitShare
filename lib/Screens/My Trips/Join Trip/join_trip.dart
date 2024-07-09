@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
+import 'package:splitshare_v3/API/clear_boxes.dart';
 import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Screens/My%20Trips/Join%20Trip/qr_scanner.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
@@ -65,6 +66,8 @@ class _JoinTripState extends State<JoinTrip> {
           .doc(tripCode).update({
         'users': FieldValue.arrayUnion([FirebaseAuth.instance.currentUser!.uid])
       });
+
+      await clearAllTheBoxes();
 
       //Save to Prefs
       var box = Hive.box('tripInfo');

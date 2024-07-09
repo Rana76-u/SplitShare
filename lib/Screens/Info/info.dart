@@ -13,6 +13,7 @@ import 'package:splitshare_v3/Screens/Info/info_floating.dart';
 import 'package:splitshare_v3/Screens/My%20Trips/my_trips.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
 import 'package:splitshare_v3/Widgets/snack_bar.dart';
+import '../../API/check_connection.dart';
 import '../../Models/Hive/Event/hive_event_model.dart';
 import '../../Models/Hive/User/hive_user_model.dart';
 import '../../Models/trip_info_manager.dart';
@@ -25,7 +26,7 @@ class InfoPage extends StatefulWidget {
 }
 
 class _InfoPageState extends State<InfoPage> {
-  bool connection = false;
+  //bool connection = false;
   bool _isLoading = false;
 
   String tripCreator = '';
@@ -40,19 +41,16 @@ class _InfoPageState extends State<InfoPage> {
   @override
   void initState() {
     _isLoading = true;
-    checkConnection();
+    setConnection();
     loadInfo();
     super.initState();
   }
 
-  Future<void> checkConnection() async {
-    bool hasConnection = await InternetConnectionChecker().hasConnection;
-    if (hasConnection != connection) {
-      // The connection status has changed.
-      setState(() {
-        connection = hasConnection;
-      });
-    }
+  void setConnection() async {
+    bool connectionStatus = await checkConnection();
+    setState(() {
+      connection = connectionStatus;
+    });
   }
 
   void loadInfo() async {
@@ -254,12 +252,11 @@ class _InfoPageState extends State<InfoPage> {
         Get.to(() => BottomBar(bottomIndex: 0), transition: Transition.fade);
       },
       child: Scaffold(
-        appBar: HomeAppBar(
-          connected: connection,
+        appBar: const HomeAppBar(
           isLoading: false,
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: InfoFloatingActionButton(connection: connection,),
+        floatingActionButton: const InfoFloatingActionButton(),
         body: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(),
@@ -317,55 +314,67 @@ class _InfoPageState extends State<InfoPage> {
 
   Widget editTripWidget() {
     return IconButton(
-      onPressed: () {
-        if(connection){
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              TextEditingController tripNameController = TextEditingController();
-              tripNameController.text = tripName;
+      onPressed: () async {
+        if(await checkConnection()){
 
-              return AlertDialog(
-                title: const Text('Edit Trip'),
-                content: TextField(
-                  controller: tripNameController,
-                  decoration: const InputDecoration(hintText: "Enter trip details"),
-                ),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Cancel'),
+          connection = true;
+
+          if(mounted){
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                TextEditingController tripNameController = TextEditingController();
+                tripNameController.text = tripName;
+
+                return AlertDialog(
+                  title: const Text('Edit Trip'),
+                  content: TextField(
+                    controller: tripNameController,
+                    decoration: const InputDecoration(hintText: "Enter trip details"),
                   ),
-                  TextButton(
-                    onPressed: () async {
-                      final navigator = Navigator.of(context);
-                      await FirebaseFirestore.instance.collection('trips')
-                          .doc(tripCode)
-                          .update({
-                        'tripName': tripNameController.text
-                      });
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final navigator = Navigator.of(context);
+                        await FirebaseFirestore.instance.collection('trips')
+                            .doc(tripCode)
+                            .update({
+                          'tripName': tripNameController.text
+                        });
 
-                      final tripBox = Hive.box('tripInfo');
-                      await tripBox.put('tripName', tripNameController.text);
+                        final tripBox = Hive.box('tripInfo');
+                        await tripBox.put('tripName', tripNameController.text);
 
-                      // Dismiss the dialogue
-                      navigator.pop();
+                        // Dismiss the dialogue
+                        navigator.pop();
 
-                      // updates the page
-                      _handleRefresh();
-                    },
-                    child: const Text('Submit'),
-                  ),
-                ],
-              );
-            },
-          );
+                        // updates the page
+                        _handleRefresh();
+                      },
+                      child: const Text('Submit'),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+
         }
         else{
-          showMessage(context);
+          connection = false;
+
+          if(mounted){
+            showMessage(context);
+          }
         }
+
+
 
       },
       icon: const Icon(Icons.edit),
@@ -597,7 +606,7 @@ class _InfoPageState extends State<InfoPage> {
       padding: EdgeInsets.only(top: 50),
       child: Center(
         child: Text(
-          'Version 4.0.0',
+          'Version 5.0.0',
           style: TextStyle(color: Colors.grey),
           textAlign: TextAlign.center,
         ),

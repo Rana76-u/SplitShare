@@ -4,8 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:intl/intl.dart';
+import 'package:splitshare_v3/API/check_connection.dart';
 import 'package:splitshare_v3/API/hive_api.dart';
 import 'package:splitshare_v3/Models/manage_crud_operations.dart';
 import 'package:splitshare_v3/Models/trip_info_manager.dart';
@@ -25,7 +25,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Timer? connectionTimer;
-  bool connection = false;
+  //Timer? debounceTimer;
+  //bool connection = false;
   bool showNoConnectionMessage = false;
 
   final bool _isSearching = false;
@@ -53,54 +54,28 @@ class _HomePageState extends State<HomePage> {
   @override
   initState() {
     _isLoading = true;
-    setTripCode();
-    getAllSavedData();
-    startConnectionCheckTimer();
-    loadTripInfo();
+    setConnection();
     super.initState();
   } //Done
 
+  void setConnection() async {
+    bool connectionStatus = await checkConnection();
+    setState(() {
+      connection = connectionStatus;
+    });
+
+
+    setTripCode();
+
+    await getAllSavedData();
+
+    await loadTripInfo();
+  }
+
   void setTripCode() async {
-    var tripBox = await Hive.box('tripInfo');
+    var tripBox = Hive.box('tripInfo');
     tripCode = await tripBox.get('tripCode');
   } //Done
-
-  void startConnectionCheckTimer() {
-    // Create a timer that checks the connection status every 0.5 seconds.
-    connectionTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      if (mounted) {
-        checkConnection();
-      }
-    });
-  } //Done
-
-  Future<void> checkConnection() async {
-    bool hasConnection = await InternetConnectionChecker().hasConnection;
-
-    if (mounted) {
-      if (hasConnection != connection) {
-
-        if (hasConnection == true) {
-          if (!isBackupInProgress) {
-            isBackupInProgress = true;
-            backupData().then((_) {
-              isBackupInProgress = false;
-            });
-          }
-        }
-        else if(hasConnection == false){
-          showNoConnectionMessage = true;
-          await getAllSavedData();
-        }
-
-        // The connection status has changed.
-        setState(() {
-          connection = hasConnection;
-        });
-      }
-    }
-  }
- //Done
 
   Future<void> getAllSavedData() async {
     docIDs.clear();
@@ -136,7 +111,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loadTripInfo() async {
 
-    if (connection) {
+    if (await checkConnection()) {
       TripInfoManager().loadAndSaveTripInfo(tripCode);
 
       //if the user does not belong to the trip anymore
@@ -144,7 +119,7 @@ class _HomePageState extends State<HomePage> {
       //then redirect to MyTrips page
       List<String>? tempUserIds = await TripInfoManager().getTripUserIDs();
       if(tempUserIds.contains(FirebaseAuth.instance.currentUser!.uid)) {
-        await backupData();
+        //await backupData();
       }
       else{
         //Unhandled Exception:
@@ -188,6 +163,9 @@ class _HomePageState extends State<HomePage> {
       ),
     );
 
+
+    await backupData();
+
     // Simulate a delay for the refresh indicator
     await Future.delayed(const Duration(seconds: 1));
 
@@ -195,26 +173,63 @@ class _HomePageState extends State<HomePage> {
     navigator;
   } //Done
 
-  // todo
   Future<void> backupData() async {
     //get all the offline event and check if the action says 'update' or not
     final box = Hive.box<Event>('events');
-    final events = box.values.toList();
+    List<Event> events = box.values.toList();
 
     for (var event in events) {
-      if(event.action == 'update') {
-        await ManageCRUDOperations().uploadInfo(event.title, event.description, event.amount,
-            event.providedBy, event.providerName, event.id, tripCode);
+      if (event.action == 'update') {
+        await ManageCRUDOperations().uploadInfo(
+          event.title,
+          event.description,
+          event.amount,
+          event.providedBy,
+          event.providerName,
+          event.id,
+          tripCode,
+        );
 
-        //change event.action to 'none'
-        event.action = 'none';
+        /*if(event.id.contains('new')){
+          await FirebaseFirestore
+              .instance
+              .collection('trips')
+              .doc(tripCode)
+              .collection('Events')
+              .doc()
+              .set({
+            'title': event.title,
+            'description': event.description,
+            'amount': event.amount,
+            'time': DateTime.now(),
+            'addedBy': FirebaseAuth.instance.currentUser!.uid,
+            'providedBy': event.providedBy,
+          });
+        }
+        else{
+          await FirebaseFirestore
+              .instance
+              .collection('trips')
+              .doc(tripCode)
+              .collection('Events')
+              .doc(event.id)
+              .update({
+            'title': event.title,
+            'description': event.description,
+            'amount': event.amount,
+            'providedBy': event.providedBy,
+          });
+        }*/
 
-        // Save the updated event back to the Hive box
-        box.put(event.key, event);
+        //event.action = 'none';
+
+        //await HiveApi().saveOrUpdateEvent(event);
+        await ManageCRUDOperations().deleteFromSave(event.id);
+
       }
       else if(event.action == 'delete'){
         //means only saved in hive not DB
-        if(event.id == 'new'){
+        if(event.id.contains('new')){
           ManageCRUDOperations().deleteFromSave(event.id);
         }
         else{
@@ -240,7 +255,6 @@ class _HomePageState extends State<HomePage> {
       canPop: false,
       child: Scaffold(
         appBar: HomeAppBar(
-          connected: connection,
           isLoading: _isLoading,
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -249,8 +263,8 @@ class _HomePageState extends State<HomePage> {
           onRefresh: _handleRefresh,
           child: _isLoading
               ? const Center(
-                  child:
-                      CircularProgressIndicator(), /*Column(
+                  child: CircularProgressIndicator(),
+            /*Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -270,32 +284,40 @@ class _HomePageState extends State<HomePage> {
             )*/
                 )
               :
-              //SingleChildScrollView
-              SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      //Internet Checker
-                      // todo
-                      if (showNoConnectionMessage) ...[
-                        Container(
-                          color: Colors.red,
-                          width: double.infinity,
-                          child: const Text(
-                            "no internet connection",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
-                            textAlign: TextAlign.center,
-                          ),
-                        )
-                      ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight
+                      ),
+                      child: Column(
+                        children: [
+                          //Internet Checker
+                          // todo
+                          if (connection == false) ...[
+                            Container(
+                              color: Colors.red,
+                              width: double.infinity,
+                              child: const Text(
+                                "no internet, swipe from the top to refresh",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white
+                                ),
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )
+                          ],
 
-                      searchAndFilterWidget(),
+                          searchAndFilterWidget(),
 
-                      //Problem is here cause the connection variable is always set to true initially
-                      //and the connection checker timer calls himself after 2s
-                      //Todo Temporarily I set connection to false initially - if it works then ok
-                      /*if (connection) ...[
+                          //Problem is here cause the connection variable is always set to true initially
+                          //and the connection checker timer calls himself after 2s
+                          // Temporarily I set connection to false initially - if it works then ok
+                          /*if (connection) ...[
                         SingleChildScrollView(
                           child: Padding(
                               padding:
@@ -312,19 +334,22 @@ class _HomePageState extends State<HomePage> {
                         )
                       ],*/
 
-                      Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: connection
-                              ? loadItemFromDatabase() // Load from Firebase when online
-                              : loadItemFromHive() // Load from Hive when offline
-                      ),
+                          Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: connection
+                                  ? loadItemFromDatabase() // Load from Firebase when online
+                                  : loadItemFromHive() // Load from Hive when offline
+                          ),
 
-                      const SizedBox(
-                        height: 100,
+                          const SizedBox(
+                            height: 100,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
+              ),
         ),
       ),
     );
