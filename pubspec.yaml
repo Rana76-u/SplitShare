@@ -57,6 +57,9 @@ dependencies:
   path_provider:
   downloads_path_provider_28:
   open_file:
+  syncfusion_flutter_pdfviewer: ^23.1.36
+  image_gallery_saver: ^2.0.3
+  screenshot:
 
 dev_dependencies:
   flutter_test:

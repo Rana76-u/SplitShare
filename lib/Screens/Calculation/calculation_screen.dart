@@ -1,9 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:splitshare_v3/Models/trip_info_manager.dart';
 import 'package:splitshare_v3/Screens/Calculation/calculation_api.dart';
+import 'package:splitshare_v3/Screens/Calculation/calculation_floating.dart';
 import 'package:splitshare_v3/Screens/Home/home_appbar.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
 import '../../API/check_connection.dart';
@@ -27,9 +27,6 @@ class _CalculationScreenState extends State<CalculationScreen> {
   List<double> amounts = [];
   List<String> providerNames = [];
   List<String> providerIDs = [];
-
-
-
 
   //uid, uname
   Map<String, String> userNames = {};
@@ -187,6 +184,13 @@ class _CalculationScreenState extends State<CalculationScreen> {
         appBar: const HomeAppBar(
           isLoading: false,
         ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: CalculationFloating(
+          totalOfIndividuals: totalOfIndividuals,
+          total: total,
+          perPerson: perPerson,
+          splitLogs: splitLogs,
+        ),
         body: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(),
@@ -200,7 +204,9 @@ class _CalculationScreenState extends State<CalculationScreen> {
 
                       const SizedBox(height: 5,),
 
-                      individualSpending()
+                      individualSpending(),
+
+                      const SizedBox(height: 175,),
                     ],
                   ),
                 ),
@@ -271,7 +277,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
                 userDetailRow(index),
 
                 //to pay
-                listOfPayers(index)
+                listOfPayers(index),
               ],
             ),
           ),

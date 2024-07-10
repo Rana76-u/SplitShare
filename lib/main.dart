@@ -48,9 +48,12 @@ class MyApp extends StatelessWidget {
     return FutureBuilder(
       future: TripInfoManager().getTripCode(),
       builder: (context, snapshot) {
+
+        String code = snapshot.data ?? '';
+
         if (FirebaseAuth.instance.currentUser != null && //!.uid.isNotEmpty
             snapshot.connectionState == ConnectionState.done &&
-            snapshot.data!.isNotEmpty) { //isNotEmpty ?.length != 0
+            code != '') { //isNotEmpty, snapshot.data?.length != 0
           return BottomBar(bottomIndex: 0);
         } else if (FirebaseAuth.instance.currentUser != null) {
           return const MyTrips();

@@ -8,7 +8,7 @@ class HiveApi {
   }
 
   Future<Event?> getEvent(String id) async {
-    var box = await Hive.box<Event>('events');
+    var box = Hive.box<Event>('events');
 
     // Find the event with the specified ID
     Event? event = box.values.firstWhere((event) => event.id == id);

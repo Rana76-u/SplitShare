@@ -1,290 +1,286 @@
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/widgets.dart';
+import 'package:splitshare_v3/API/PDF/pdf_api.dart';
+import 'package:splitshare_v3/Models/pdf/invoice.dart';
 
-import 'file_handle_api.dart';
+class PdfTripReportApi {
+  static Future<File> generate(TripReport tripReport, String name) async {
+    /*var myTheme = ThemeData.withFont(
+      base: Font.ttf(await rootBundle.load("assets/OpenSans-Regular.ttf")),
+      bold: Font.ttf(await rootBundle.load("assets/OpenSans-Bold.ttf")),
+      italic: Font.ttf(await rootBundle.load("assets/OpenSans-Italic.ttf")),
+      boldItalic: Font.ttf(await rootBundle.load("assets/OpenSans-BoldItalic.ttf")),
+    );*/
 
-class PdfInvoiceApi {
-  static Future<File> generate() async {
-    final pdf = pw.Document();
-
-    final iconImage =
-        (await rootBundle.load('assets/icon.png')).buffer.asUint8List();
-
-    final tableHeaders = [
-      'Description',
-      'Quantity',
-      'Unit Price',
-      'VAT',
-      'Total',
-    ];
-
-    final tableData = [
-      [
-        'Coffee',
-        '7',
-        '\$ 5',
-        '1 %',
-        '\$ 35',
-      ],
-      [
-        'Blue Berries',
-        '5',
-        '\$ 10',
-        '2 %',
-        '\$ 50',
-      ],
-      [
-        'Water',
-        '1',
-        '\$ 3',
-        '1.5 %',
-        '\$ 3',
-      ],
-      [
-        'Apple',
-        '6',
-        '\$ 8',
-        '2 %',
-        '\$ 48',
-      ],
-      [
-        'Lunch',
-        '3',
-        '\$ 90',
-        '12 %',
-        '\$ 270',
-      ],
-      [
-        'Drinks',
-        '2',
-        '\$ 15',
-        '0.5 %',
-        '\$ 30',
-      ],
-      [
-        'Lemon',
-        '4',
-        '\$ 7',
-        '0.5 %',
-        '\$ 28',
-      ],
-    ];
-
-    pdf.addPage(
-      pw.MultiPage(
-        // header: (context) {
-        //   return pw.Text(
-        //     'Flutter Approach',
-        //     style: pw.TextStyle(
-        //       fontWeight: pw.FontWeight.bold,
-        //       fontSize: 15.0,
-        //     ),
-        //   );
-        // },
-        build: (context) {
-          return [
-            pw.Row(
-              children: [
-                pw.Image(
-                  pw.MemoryImage(iconImage),
-                  height: 72,
-                  width: 72,
-                ),
-                pw.SizedBox(width: 1 * PdfPageFormat.mm),
-                pw.Column(
-                  mainAxisSize: pw.MainAxisSize.min,
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      'INVOICE',
-                      style: pw.TextStyle(
-                        fontSize: 17.0,
-                        fontWeight: pw.FontWeight.bold,
-                        //font: Font.ttf(File('open-sans.ttf').readAsBytesSync().buffer.asByteData())
-                      ),
-                    ),
-                    pw.Text(
-                      'Flutter Approach',
-                      style: const pw.TextStyle(
-                        fontSize: 15.0,
-                        color: PdfColors.grey700,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.Spacer(),
-                pw.Column(
-                  mainAxisSize: pw.MainAxisSize.min,
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      'John Doe',
-                      style: pw.TextStyle(
-                        fontSize: 15.5,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.Text(
-                      'john@gmail.com',
-                    ),
-                    pw.Text(
-                      DateTime.now().toString(),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 1 * PdfPageFormat.mm),
-            pw.Divider(),
-            pw.SizedBox(height: 1 * PdfPageFormat.mm),
-            pw.Text(
-              'Dear John,\nLorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem. Veritatis obcaecati tenetur iure eius earum ut molestias architecto voluptate aliquam nihil, eveniet aliquid culpa officia aut! Impedit sit sunt quaerat, odit, tenetur error',
-              textAlign: pw.TextAlign.justify,
-            ),
-            pw.SizedBox(height: 5 * PdfPageFormat.mm),
-
-            ///
-            /// PDF Table Create
-            ///
-            pw.TableHelper.fromTextArray(
-              headers: tableHeaders,
-              data: tableData,
-              border: null,
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey300),
-              cellHeight: 30.0,
-              cellAlignments: {
-                0: pw.Alignment.centerLeft,
-                1: pw.Alignment.centerRight,
-                2: pw.Alignment.centerRight,
-                3: pw.Alignment.centerRight,
-                4: pw.Alignment.centerRight,
-              },
-            ),
-            pw.Divider(),
-            pw.Container(
-              alignment: pw.Alignment.centerRight,
-              child: pw.Row(
-                children: [
-                  pw.Spacer(flex: 6),
-                  pw.Expanded(
-                    flex: 4,
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Row(
-                          children: [
-                            pw.Expanded(
-                              child: pw.Text(
-                                'Net total',
-                                style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            pw.Text(
-                              '\$ 464',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        pw.Row(
-                          children: [
-                            pw.Expanded(
-                              child: pw.Text(
-                                'Vat 19.5 %',
-                                style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            pw.Text(
-                              '\$ 90.48',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        pw.Divider(),
-                        pw.Row(
-                          children: [
-                            pw.Expanded(
-                              child: pw.Text(
-                                'Total amount due',
-                                style: pw.TextStyle(
-                                  fontSize: 14.0,
-                                  fontWeight: pw.FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            pw.Text(
-                              '\$ 554.48',
-                              style: pw.TextStyle(
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        pw.SizedBox(height: 2 * PdfPageFormat.mm),
-                        pw.Container(height: 1, color: PdfColors.grey400),
-                        pw.SizedBox(height: 0.5 * PdfPageFormat.mm),
-                        pw.Container(height: 1, color: PdfColors.grey400),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ];
-        },
-        footer: (context) {
-          return pw.Column(
-            mainAxisSize: pw.MainAxisSize.min,
-            children: [
-              pw.Divider(),
-              pw.SizedBox(height: 2 * PdfPageFormat.mm),
-              pw.Text(
-                'Flutter Approach',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 1 * PdfPageFormat.mm),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.center,
-                children: [
-                  pw.Text(
-                    'Address: ',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.Text(
-                    'Merul Badda, Anandanagor, Dhaka 1212',
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 1 * PdfPageFormat.mm),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.center,
-                children: [
-                  pw.Text(
-                    'Email: ',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.Text(
-                    'flutterapproach@gmail.com',
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
+    final pdf = Document(
+      //theme: myTheme,
     );
 
-    return FileHandleApi.saveDocument(name: 'my_invoice.pdf', pdf: pdf);
+    pdf.addPage(
+        MultiPage(
+          build: (context) => [
+            buildHeader(tripReport),
+            SizedBox(height: 1 * PdfPageFormat.cm),
+            buildTotal(tripReport),
+
+            SizedBox(height: 1 * PdfPageFormat.cm),
+            buildTitle(tripReport),
+            Divider(),
+            
+            buildUsersList(tripReport)
+          ],
+          footer: (context) => buildFooter(tripReport),//
+        )
+    );
+
+    return PdfApi.saveDocument(name: name, pdf: pdf);
   }
+
+  static Widget buildHeader(TripReport tripReport) => Column(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      SizedBox(height: 1 * PdfPageFormat.cm),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+              'SplitShare',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                    fontSize: 22
+                  )
+              ),
+              SizedBox(height: 1 * PdfPageFormat.mm),
+              Text(
+                  tripReport.info.tripName,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold
+                )
+              ),
+              SizedBox(height: 1 * PdfPageFormat.mm),
+              Text(
+                tripReport.info.createInfo,
+                style: const TextStyle(
+                  color: PdfColors.grey,
+                  fontSize: 11
+                )
+              ),
+            ],
+          )
+        ],
+      ),
+      SizedBox(height: 1 * PdfPageFormat.cm),
+    ],
+  );
+
+  static Widget buildTitle(TripReport tripReport) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Trip Report',
+        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      ),
+      SizedBox(height: 0.8 * PdfPageFormat.cm),
+    ],
+  );
+
+  static Widget buildTotal(TripReport tripReport) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Total Spent : ${tripReport.info.total.toStringAsFixed(1)}'),
+      Text('Per Person Cost : ${tripReport.info.perPerson.toStringAsFixed(1)}'),
+    ],
+  );
+
+  static pw.Widget buildUsersList(TripReport tripReport) => pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      for (var user in tripReport.usersList) ...[
+        pw.Row(
+          children: [
+            pw.Text(
+              user.name,
+              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.Spacer(),
+            pw.Text('-'),
+            pw.Spacer(),
+            pw.Text('Total Spent: ${user.totalSpent.toStringAsFixed(1)}'),
+            pw.Spacer(),
+            pw.Text('-'),
+            pw.Spacer(),
+            pw.Text(user.payOrReceiveAmount),
+          ]
+        ),
+
+        if (user.payers.isNotEmpty) ...[
+
+          for (var payer in user.payers) ...[
+            if(payer.payTo == '' || payer.amount == '') ...[
+              pw.SizedBox()
+            ] else...[
+              pw.SizedBox(height: 0.25 * PdfPageFormat.cm),
+              pw.Text('${user.name} will pay to:    ${payer.payTo}    =>    ${payer.amount}'),
+            ]
+          ]
+            ,
+        ],
+        pw.SizedBox(height: 1 * PdfPageFormat.cm),
+      ],
+    ],
+  );
+
+  static pw.Widget buildFooter(TripReport tripReport) => pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.center,
+    children: [
+      pw.Divider(),
+      pw.Text(
+        'Generated by SplitShare',
+        style: const pw.TextStyle(fontSize: 12),
+      ),
+    ],
+  );
+
+  static buildSimpleText({required String title, required String value,}) {
+    final style = TextStyle(fontWeight: FontWeight.bold);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.end,
+      children: [
+        Text(title, style: style),
+        SizedBox(width: 2 * PdfPageFormat.mm),
+        Text(value),
+      ],
+    );
+  }
+
+  static buildText({required String title, required String value, double width = double.infinity,
+    TextStyle? titleStyle, bool unite = false,
+  }) {
+    final style = titleStyle ?? TextStyle(fontWeight: FontWeight.bold);
+
+    return Container(
+      width: width,
+      child: Row(
+        children: [
+          Expanded(child: Text(title, style: style)),
+          Text(value, style: unite ? style : null),
+        ],
+      ),
+    );
+  }
+
+
+/*  static Widget buildtripReportInfo(TripInfo info) {
+
+    final titles = <String>[
+      'tripReport Number:',
+      'tripReport Date:',
+      'Due Date:'
+    ];
+    final data = <String>[
+      info.number,
+      Utils.formatDate(info.date),
+      Utils.formatDate(info.dueDate),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: List.generate(titles.length, (index) {
+        final title = titles[index];
+        final value = data[index];
+
+        return buildText(title: title, value: value, width: 200);
+      }),
+    );
+  }
+
+  static Widget buildtripReport(TripReport tripReport) {
+    final headers = [
+      'Description',
+      'Brand',
+      'Size',
+      'Quantity',
+      'Unit Price',
+      'Total'
+    ];
+    final data = tripReport.items.map((item) {
+      final total = item.unitPrice * item.quantity;
+
+      return [
+        item.description,
+        item.brand,
+        item.size,
+        '${item.quantity}',
+        '\$ ${item.unitPrice}',
+        '\$ ${total.toStringAsFixed(2)}',
+      ];
+    }).toList();
+
+    return TableHelper.fromTextArray(
+      headers: headers,
+      data: data,
+      border: null,
+      headerStyle: TextStyle(fontWeight: FontWeight.bold),
+      headerDecoration: const BoxDecoration(color: PdfColors.grey300),
+      cellHeight: 30,
+      cellAlignments: {
+        0: Alignment.centerLeft,
+        1: Alignment.centerRight,
+        2: Alignment.centerRight,
+        3: Alignment.centerRight,
+        4: Alignment.centerRight,
+        5: Alignment.centerRight,
+      },
+    );
+  }
+
+  static Widget buildTol(tripReport tripReport) {
+    final netTotal = tripReport.items
+        .map((item) => item.unitPrice * item.quantity)
+        .reduce((item1, item2) => item1 + item2);
+    //final total = netTotal + vat;
+
+    return Container(
+      alignment: Alignment.centerRight,
+      child: Row(
+        children: [
+          Spacer(flex: 6),
+          Expanded(
+            flex: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                buildText(
+                  title: 'Net total',
+                  value: Utils.formatPrice(netTotal),
+                  unite: true,
+                ),
+                Divider(),
+                buildText(
+                  title: 'Total amount due',
+                  titleStyle: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  value: Utils.formatPrice(total),
+                  unite: true,
+                ),
+                SizedBox(height: 2 * PdfPageFormat.mm),
+                Container(height: 1, color: PdfColors.grey400),
+                SizedBox(height: 0.5 * PdfPageFormat.mm),
+                Container(height: 1, color: PdfColors.grey400),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }*/
 }

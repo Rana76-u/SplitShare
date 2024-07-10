@@ -114,8 +114,7 @@ class _InfoPageState extends State<InfoPage> {
     DateTime tempDateTime = DateTime.fromMillisecondsSinceEpoch(
       seconds * 1000 + nanoseconds ~/ 1000000,
     );
-    tripDate =
-        DateFormat('hh:mm a EE, dd MMM, yyyy').format(tempDateTime).toString();
+    tripDate = DateFormat('hh:mm a EE, dd MMM, yyyy').format(tempDateTime).toString();
   }
 
   void _generateQR() {
@@ -389,31 +388,34 @@ class _InfoPageState extends State<InfoPage> {
         //Trip Info
         SizedBox(
           width: MediaQuery.of(context).size.width * 0.5 - 30,
-          child: Text.rich(TextSpan(
-              text: 'Created by ',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-              children: [
-                TextSpan(
-                    text: userNames[userIDs.indexOf(tripCreator)],
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        overflow: TextOverflow.clip,
-                        color: Colors.black,
-                        fontSize: 15)),
-                const TextSpan(
-                    text: " at ",
-                    style: TextStyle(
-                        overflow: TextOverflow.clip,
-                        color: Colors.grey,
-                        fontSize: 12)),
-                TextSpan(
-                    text: tripDate,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        overflow: TextOverflow.clip,
-                        color: Colors.black,
-                        fontSize: 14)),
-              ])),
+          child: Text.rich(
+              TextSpan(
+                  text: 'Created by ',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  children: [
+                    TextSpan(
+                        text: userNames[userIDs.indexOf(tripCreator)],
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            overflow: TextOverflow.clip,
+                            color: Colors.black,
+                            fontSize: 15)),
+                    const TextSpan(
+                        text: " at ",
+                        style: TextStyle(
+                            overflow: TextOverflow.clip,
+                            color: Colors.grey,
+                            fontSize: 12)),
+                    TextSpan(
+                        text: tripDate,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            overflow: TextOverflow.clip,
+                            color: Colors.black,
+                            fontSize: 14)),
+                  ]
+              )
+          ),
         ),
 
         //Space
