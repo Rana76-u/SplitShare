@@ -1,17 +1,20 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
+import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc.dart';
+import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc_state.dart';
+import 'package:splitshare_v3/Services/Refresh%20Handler/refresh_handler.dart';
 import 'package:splitshare_v3/Services/trip_info_manager.dart';
 import 'package:splitshare_v3/View/Calculation/calculation_api.dart';
 import 'package:splitshare_v3/View/Calculation/calculation_floating.dart';
-import 'package:splitshare_v3/View/Home/home_appbar.dart';
 import '../../Services/Utility/check_connection.dart';
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_bloc.dart';
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_event.dart';
 import '../../Controller/Routes/bottombar_routing.dart';
 import '../../Models/Hive/Event/hive_event_model.dart';
 import '../../Widgets/bottom_nav_bar.dart';
-
+import '../Home/home_appbar.dart';
 
 class CalculationScreen extends StatefulWidget {
   const CalculationScreen({super.key});
@@ -22,7 +25,6 @@ class CalculationScreen extends StatefulWidget {
 
 class _CalculationScreenState extends State<CalculationScreen> {
   bool _isLoading = false;
-  //bool connection = false;
 
   double total = 0.0;
   double perPerson = 0.0;
@@ -43,6 +45,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
   Map<String, double> biggestGivers = {};
 
   List<String> splitLogs = [];
+  List<int> expandIndexes = [];
 
   @override
   void initState() {
@@ -150,7 +153,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
 
       double remainingAmount = receiverBalance.floorToDouble() - giverBalance.floorToDouble();
 
-      // > 0 means Receiver still owns money, and biggest giver has giver all his money
+      // > 0 means Receiver still owns money, and biggest giver has given all his money
       if(remainingAmount > 0){
         //Set Biggest Receiver balance = remaining amount;
         biggestReceivers[receiverUid] = remainingAmount; //2368
@@ -179,34 +182,39 @@ class _CalculationScreenState extends State<CalculationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      onPopInvoked: (didPop) {
-        
-        context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
-        Navigator.of(context).push(
-          BottomBarAnimatedPageRoute(page: const BottomBar()),
-        );
-      },
-      child: Scaffold(
-        //todo: add appbar
-        //appBar: const HomeAppBar(),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: CalculationFloating(
-          totalOfIndividuals: totalOfIndividuals,
-          total: total,
-          perPerson: perPerson,
-          splitLogs: splitLogs,
-        ),
-        body: _isLoading
-            ? const Center(
+    return BlocBuilder<HomeBloc, HomeBlocState>(
+      builder: (context, state) {
+        return PopScope(
+          onPopInvoked: (didPop) {
+
+            context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
+            Navigator.of(context).push(
+              BottomBarAnimatedPageRoute(page: const BottomBar()),
+            );
+          },
+          child: Scaffold(
+            appBar: HomeAppBar(state: state, screen: 'Calculation', total: total, perPerson: perPerson,),
+            floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+            floatingActionButton: CalculationFloating(
+              totalOfIndividuals: totalOfIndividuals,
+              total: total,
+              perPerson: perPerson,
+              splitLogs: splitLogs,
+            ),
+            body: RefreshIndicator(
+              onRefresh: () {
+                calculationRefreshHandle(context, state);
+                return Future.delayed(const Duration(seconds: 1));
+              },
+              child: _isLoading
+                  ? const Center(
                 child: CircularProgressIndicator(),
               )
-            : SingleChildScrollView(
+                  : SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 15),
                   child: Column(
                     children: [
-                      spendingCard(),
 
                       const SizedBox(height: 5,),
 
@@ -217,50 +225,10 @@ class _CalculationScreenState extends State<CalculationScreen> {
                   ),
                 ),
               ),
-      ),
-    );
-  }
-
-  //totals
-  Widget spendingCard() {
-    return SizedBox(
-      width: double.infinity,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Column(
-                children: [
-                  const Text(
-                    'Total Spending',
-                    style: TextStyle(
-                        fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20),
-                  ),
-                  Text(
-                    'Per Person: ${perPerson.toStringAsFixed(2)}/-',
-                    style: const TextStyle(
-                        fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15),
-                  ),
-                ],
-              ),
-              Text(
-                '$total/-',
-                style: const TextStyle(
-                    fontFamily: 'Urbanist',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
   
@@ -297,171 +265,256 @@ class _CalculationScreenState extends State<CalculationScreen> {
     String tempPayReceiveAmount = (totalOfIndividuals.values.elementAt(index) - perPerson).abs().toStringAsFixed(1);
     bool redOrGreen = totalOfIndividuals.values.elementAt(index) >= perPerson;
 
-    return Row(
-      children: [
-        Visibility(
-          visible: connection && userImageUrls.values.elementAt(index) != '' || userImageUrls.values.elementAt(index).isNotEmpty,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(50),
-            child: SizedBox(
-              height: 35,
-              child: Image.network(userImageUrls.values.elementAt(index)),
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if(expandIndexes.contains(index)){
+            expandIndexes.remove(index);
+          }else{
+            expandIndexes.add(index);
+          }
+        });
+      },
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Visibility(
+            visible: connection && userImageUrls.values.elementAt(index) != '' || userImageUrls.values.elementAt(index).isNotEmpty,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: SizedBox(
+                height: 35,
+                child: CachedNetworkImage(
+                  imageUrl: userImageUrls.values.elementAt(index),
+                  placeholder: (context, url) => const CircularProgressIndicator(),
+                  errorWidget: (context, url, error) => const Icon(Icons.error),
+                ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 5,),
-        Text(
-          userNames.values.elementAt(index),
-          style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              overflow: TextOverflow.ellipsis),
-        ),
-        const Spacer(),
+          const SizedBox(width: 5,),
 
-        //amounts
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(
-                    text: 'Spent ',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-
-                  TextSpan(
-                    text: '${totalOfIndividuals.values.elementAt(index)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: totalOfIndividuals.values.elementAt(index) >= perPerson ? Colors.green : Colors.redAccent,
-                    ),
-                  ),
-                  const TextSpan(
-                    text: ' ',
-                  ),
-                  TextSpan(
-                    text: 'of ${perPerson.toStringAsFixed(1)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
+          Expanded(
+            child: Text(
+              userNames.values.elementAt(index),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  overflow: TextOverflow.ellipsis
               ),
-              overflow: TextOverflow.ellipsis,
             ),
-
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: redOrGreen ? 'will receive : ' : 'will pay : ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+          ),
+          const SizedBox(width: 15,),
+          //amounts
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  children: [
+                    const TextSpan(
+                      text: 'Spent ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
-                  ),
 
-                  TextSpan(
-                    text: tempPayReceiveAmount,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: redOrGreen ? Colors.green : Colors.redAccent,
+                    TextSpan(
+                      text: '${totalOfIndividuals.values.elementAt(index)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: totalOfIndividuals.values.elementAt(index) >= perPerson ? Colors.green : Colors.redAccent,
+                      ),
                     ),
-                  ),
-
-                  const TextSpan(
-                    text: ' Tk',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                    const TextSpan(
+                      text: ' ',
                     ),
-                  ),
-
-                ],
+                    TextSpan(
+                      text: 'of ${perPerson.toStringAsFixed(1)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-              overflow: TextOverflow.ellipsis,
+
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: redOrGreen ? 'will receive : ' : 'will pay : ',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+
+                    TextSpan(
+                      text: tempPayReceiveAmount,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: redOrGreen ? Colors.green : Colors.redAccent,
+                      ),
+                    ),
+
+                    const TextSpan(
+                      text: ' Tk',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+
+                  ],
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+
+          const SizedBox(width: 5,),
+          GestureDetector(
+            child: Icon(
+                expandIndexes.contains(index) ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded
             ),
-          ],
-        ),
-      ],
+          )
+        ],
+      ),
     );
   }
 
   //run a full check on splitLogs for every user
   Widget listOfPayers(int index) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: splitLogs.length,
-      itemBuilder: (context, splitLogIndex) {
-        if (splitLogs[splitLogIndex].contains("${userNames.keys.elementAt(index)} will give ")) {
+    if(expandIndexes.contains(index)){
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: splitLogs.length,
+        itemBuilder: (context, splitLogIndex) {
+          if (splitLogs[splitLogIndex].contains("${userNames.keys.elementAt(index)} will give ")) {
 
-          String userName = userNames[splitLogs[splitLogIndex].substring(39, 67)]!;
+            String userName = userNames[splitLogs[splitLogIndex].substring(39, 67)]!;
 
+            String amount = splitLogs[splitLogIndex]
+                .substring(70, splitLogs[splitLogIndex].length);
 
-          String amount = splitLogs[splitLogIndex]
-              .substring(70, splitLogs[splitLogIndex].length);
+            return Column(
+              children: [
+                const Divider(
+                  thickness: 0.2,
+                  color: Colors.blueGrey,
+                ),
 
-          return Column(
-            children: [
-              const Divider(
-                thickness: 0.2,
-                color: Colors.blueGrey,
-              ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
 
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-
-                  const Text(
-                    "Pay ",
-                    style: TextStyle(
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
-
-                  Text(
-                    amount,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20
-                    ),
-                  ),
-
-                  const Text(
-                    "to",
-                  ),
-
-                  SizedBox(
-                    width: 60,
-                    child: Text(
-                      userName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          overflow: TextOverflow.ellipsis
+                    const Text(
+                      "Pay ",
+                      style: TextStyle(
+                        fontWeight: FontWeight.normal,
                       ),
                     ),
-                  ),
+                    const Spacer(),
+                    Text(
+                      amount,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20
+                      ),
+                    ),
+                    const Spacer(),
+                    const Text(
+                      "to",
+                    ),
 
-                ],
-              )
-            ],
-          );
-        }
-        else {
-          return const SizedBox();
-        }
-      },
-    );
+                    const Spacer(),
+
+                    Expanded(
+                      child: Text(
+                        userName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          overflow: TextOverflow.clip,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            );
+          }
+          else if(splitLogs[splitLogIndex].contains(" will give ${userNames.keys.elementAt(index)}")){
+
+            String userName = userNames[splitLogs[splitLogIndex].substring(0, 28)]!;
+
+            String amount = splitLogs[splitLogIndex]
+                .substring(70, splitLogs[splitLogIndex].length);
+
+            return Column(
+              children: [
+                const Divider(
+                  thickness: 0.2,
+                  color: Colors.blueGrey,
+                ),
+
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+
+                    const Text(
+                      "Receive ",
+                      style: TextStyle(
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      amount,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20
+                      ),
+                    ),
+                    const Spacer(),
+                    const Text(
+                      "From",
+                    ),
+
+                    const Spacer(),
+
+                    Expanded(
+                      child: Text(
+                        userName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          overflow: TextOverflow.clip,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            );
+          }
+          else {
+            return const SizedBox();
+          }
+        },
+      );
+    }
+    else{
+      return const SizedBox();
+    }
   }
 
 }

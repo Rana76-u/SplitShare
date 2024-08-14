@@ -2,47 +2,17 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get/get.dart';
 import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc.dart';
 import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc_state.dart';
 import 'package:splitshare_v3/Services/Hive/hive_api.dart';
+import 'package:splitshare_v3/Services/Refresh%20Handler/refresh_handler.dart';
 import 'package:splitshare_v3/View/Home/home_appbar.dart';
 import 'package:splitshare_v3/View/Home/home_floating.dart';
-import '../../Controller/Bloc/BottomBar Bloc/bottombar_bloc.dart';
-import '../../Controller/Bloc/BottomBar Bloc/bottombar_event.dart';
 import '../../Models/Hive/Event/hive_event_model.dart';
-import '../../Services/Data/backup_data.dart';
-import '../../Widgets/bottom_nav_bar.dart';
 import 'event_tile.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
-
-  Future<void> _handleRefresh(BuildContext context, HomeBlocState state) async {
-    context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
-
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return const BottomBar(); // Return the BottomBar widget directly
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return child; // You can add custom transitions here if needed
-        },
-      ),
-    );
-
-
-
-    await backupData(state);
-
-    // Simulate a delay for the refresh indicator
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Reload the same page by pushing a new instance onto the stack
-    navigator;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,12 +21,12 @@ class HomePage extends StatelessWidget {
         return PopScope(
           canPop: false,
           child: Scaffold(
-            appBar: HomeAppBar(state: state,),
+            appBar: HomeAppBar(state: state, screen: 'Home',),
             floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
             floatingActionButton: const HomeFloatingActionButton(),
             body: RefreshIndicator(
               onRefresh: () {
-                _handleRefresh(context, state);
+                homeRefreshHandle(context, state);
                 return Future.delayed(const Duration(seconds: 1));
               },
               child: state.isLoading
@@ -255,6 +225,7 @@ class HomePage extends StatelessWidget {
           }
           else {
             if(state.selectedUserID == state.providerIDs[index]){
+              
               return eventTile(state.docIDs[index], state.titles[index], state.descriptions[index],
                   double.parse(state.amounts[index]), DateTime.parse(state.times[index]),
                   '', state.providerNames[index], 'null', state);

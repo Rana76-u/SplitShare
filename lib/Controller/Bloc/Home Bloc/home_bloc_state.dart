@@ -23,6 +23,8 @@ class HomeBlocState {
 
   final TextEditingController searchController;
 
+  final double totalOfSelectedPerson;
+
   HomeBlocState({
     required this.isSearching,
     required this.isLoading,
@@ -41,6 +43,7 @@ class HomeBlocState {
     required this.userImageUrls,
     required this.userIDs,
     required this.searchController,
+    required this.totalOfSelectedPerson,
 });
 
   HomeBlocState copyWith({
@@ -61,6 +64,7 @@ class HomeBlocState {
     List<dynamic>? userImageUrls,
     List<dynamic>? userIDs,
     TextEditingController? searchController,
+    double? totalOfSelectedPerson,
   }) {
     return HomeBlocState(
       isSearching: isSearching ?? this.isSearching,
@@ -79,7 +83,8 @@ class HomeBlocState {
       userNames: userNames ?? this.userNames,
       userImageUrls: userImageUrls ?? this.userImageUrls,
       userIDs: userIDs ?? this.userIDs,
-      searchController: searchController ?? this.searchController
+      searchController: searchController ?? this.searchController,
+      totalOfSelectedPerson: totalOfSelectedPerson ?? this.totalOfSelectedPerson,
     );
   }
 }

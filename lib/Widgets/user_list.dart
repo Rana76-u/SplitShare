@@ -27,6 +27,7 @@ Widget userListWidget(HomeBlocState state) {
                 onPressed: () {
                   //as user selected title search turns of and keyboard goes away
                   context.read<HomeBloc>().add(ChangeSearchControllerText(''));
+
                   FocusManager.instance.primaryFocus?.unfocus();
                   if(state.userIDs.indexOf(state.selectedUserID) == index) {
                     context.read<HomeBloc>().add(SelectedUserID(''));
@@ -69,15 +70,34 @@ Widget userListWidget(HomeBlocState state) {
                           ),
                         ),
 
-                        const SizedBox(width: 5,),
-                        Text(
-                          state.userNames[index],
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: state.userIDs.indexOf(state.selectedUserID) == index
-                                  ? Colors.white
-                                  : Colors.black
-                          ),
+                        const SizedBox(width: 6,),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              state.userNames[index],
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: state.userIDs.indexOf(state.selectedUserID) == index
+                                      ? Colors.white
+                                      : Colors.black
+                              ),
+                            ),
+                            state.selectedUserID == state.userIDs[index] ?
+                            Text(
+                              'Total: ${state.totalOfSelectedPerson.toStringAsFixed(1)}',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 9,
+                                  color: state.userIDs.indexOf(state.selectedUserID) == index
+                                      ? Colors.white
+                                      : Colors.black
+                              ),
+                            )
+                                :
+                            const SizedBox()
+                          ],
                         )
                       ],
                     )

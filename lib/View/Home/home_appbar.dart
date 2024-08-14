@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc.dart';
 import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc_state.dart';
 import 'package:splitshare_v3/Services/Utility/check_connection.dart';
+import 'package:splitshare_v3/View/Calculation/total_spending.dart';
 import 'package:splitshare_v3/View/Home/search_filter_widget.dart';
 import 'package:splitshare_v3/View/Profile/profile.dart';
 import 'package:splitshare_v3/Widgets/snack_bar.dart';
@@ -12,10 +13,22 @@ import '../../Controller/Bloc/Home Bloc/home_bloc_event.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final HomeBlocState state;
-  const HomeAppBar({super.key, required this.state});
+  final String screen;
+  final double? total;
+  final double? perPerson;
+  const HomeAppBar({super.key, required this.state, required this.screen, this.total, this.perPerson});
 
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight + (state.connection ? 100 : 110) );
+  Size get preferredSize => Size.fromHeight(kToolbarHeight + (
+      state.connection && screen == 'Home' ? 100
+          :
+      state.connection == false && screen == 'Home' ? 110
+          :
+      screen == 'Calculation' ? 65
+          :
+          0
+    )
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +45,14 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       flexibleSpace: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          searchAndFilterWidget(context, state),
+          screen == 'Home' ? searchAndFilterWidget(context, state)
+              :
+          screen == 'Calculation' ? spendingCard(perPerson!, total!)
+              :
+          const SizedBox(), //todo: show total card on Calculation
         ],
       ),
+
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 15),

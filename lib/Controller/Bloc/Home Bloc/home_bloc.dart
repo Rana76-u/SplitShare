@@ -27,15 +27,16 @@ class HomeBloc extends Bloc<HomeBlocEvent, HomeBlocState> {
     userImageUrls: [],
     userIDs: [],
     searchController: TextEditingController(text: ''),
+    totalOfSelectedPerson: 0
   )) {
     on<InitStateEvent>((event, emit) async {
       bool connection = await checkConnection();
       String tripCode = await OfflineDataHandler().getTripCode();
-      List<EventModel> eventList = [];
+      List<EventModel> eventList = await OfflineDataHandler().getAllSaveEventsData();
 
-      if(connection == false) {
+      /*if(connection == false) {
         eventList = await OfflineDataHandler().getAllSaveEventsData();
-      }
+      }*/
 
       List<UserModel> userList = await OfflineDataHandler().getUserInfo(tripCode);
 
@@ -43,20 +44,33 @@ class HomeBloc extends Bloc<HomeBlocEvent, HomeBlocState> {
           connection: connection,
           tripCode: tripCode,
           isLoading: false,
-          docIDs: !connection ? eventList.map((e) => e.docID).toList() : state.docIDs,
-          titles: !connection ? eventList.map((e) => e.title).toList() : state.titles,
-          descriptions: !connection ? eventList.map((e) => e.description).toList() : state.descriptions,
-          amounts: !connection ? eventList.map((e) => e.amount.toString()).toList() : state.amounts,
-          times: !connection ? eventList.map((e) => e.time.toString()).toList() : state.times,
-          providerNames: !connection ? eventList.map((e) => e.providerName).toList() : state.providerNames,
-          providerIDs: !connection ? eventList.map((e) => e.providerID).toList() : state.providerIDs,
+          docIDs: eventList.map((e) => e.docID).toList(),
+          titles: eventList.map((e) => e.title).toList(),
+          descriptions: eventList.map((e) => e.description).toList(),
+          amounts: eventList.map((e) => e.amount.toString()).toList(),
+          times: eventList.map((e) => e.time.toString()).toList(),
+          providerNames: eventList.map((e) => e.providerName).toList(),
+          providerIDs: eventList.map((e) => e.providerID).toList(),
           userNames: userList.map((e) => e.name).toList(),
           userIDs: userList.map((e) => e.userId).toList(),
           userImageUrls: userList.map((e) => e.imageUrl).toList(),
       ));
     });
 
-    on<SelectedUserID>((event, emit) => emit(state.copyWith(selectedUserID: event.userID)));
+    on<SelectedUserID>((event, emit) {
+      double tempTotal = 0;
+
+      for(int i=0; i<state.amounts.length; i++){
+        if(event.userID == state.providerIDs[i]){
+          tempTotal = tempTotal + double.parse(state.amounts[i]);
+        }
+      }
+
+      emit(state.copyWith(
+        selectedUserID: event.userID,
+        totalOfSelectedPerson: tempTotal
+      ));
+    } );
 
     on<ChangeConnection>((event, emit) => emit(state.copyWith(connection: event.connection)));
 
