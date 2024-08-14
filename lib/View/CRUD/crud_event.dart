@@ -3,12 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc_state.dart';
 import 'package:splitshare_v3/Services/Utility/check_connection.dart';
 import 'package:splitshare_v3/Services/Hive/hive_api.dart';
 import 'package:splitshare_v3/Services/manage_crud_operations.dart';
 import 'package:splitshare_v3/Services/trip_info_manager.dart';
 import 'package:splitshare_v3/Widgets/loading.dart';
 
+import '../../Controller/Bloc/Home Bloc/home_bloc.dart';
+import '../../Controller/Bloc/Home Bloc/home_bloc_event.dart';
 import '../../Services/Notification/notification_sender.dart';
 import '../../Services/user_api.dart';
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_bloc.dart';
@@ -43,7 +46,6 @@ class _CRUDEventState extends State<CRUDEvent> {
   bool _isLoading = false;
   bool amountFLag = false;
   bool providerFlag = false;
-  //bool connection = false;
 
   int selectedProviderFlag = -1;
 
@@ -68,7 +70,10 @@ class _CRUDEventState extends State<CRUDEvent> {
   }
 
   void loadUsers() async {
-    connection = await checkConnection();
+
+    final ctx = context.read<HomeBloc>();
+    bool connectionStatus = await checkConnection();
+    ctx.add(ChangeConnection(connectionStatus));
 
     userNames = await TripInfoManager().getUserNames();
     userImageURLs = await TripInfoManager().getUserImageUrls();
@@ -92,6 +97,9 @@ class _CRUDEventState extends State<CRUDEvent> {
   }
 
   Future<void> uploadInfo() async {
+    final bottomBarBloc = context.read<BottomBarBloc>();
+    final navigator = Navigator.of(context);
+
     setState(() {
       _isLoading = true;
     });
@@ -178,8 +186,8 @@ class _CRUDEventState extends State<CRUDEvent> {
     });
 
     
-    context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
-    Navigator.of(context).push(
+    bottomBarBloc.add(BottomBarSelectedItem(0));
+    navigator.push(
       BottomBarAnimatedPageRoute(page: const BottomBar()),
     );
   }
@@ -188,209 +196,213 @@ class _CRUDEventState extends State<CRUDEvent> {
   Widget build(BuildContext context) {
     Loading loading = Loading();
 
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: true,
-          leading: GestureDetector(
-            onTap: () {
-              FocusManager.instance.primaryFocus?.unfocus();
-              
-              context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
-              Navigator.of(context).push(
-                BottomBarAnimatedPageRoute(page: const BottomBar()),
-              );
-            },
-              child: const Icon(Icons.arrow_back)
-          ),
-          actions: [
-            //Save Button
-            Padding(
-              padding: const EdgeInsets.only(right: 20),
-              child: ElevatedButton(
-                onPressed: () async {
-                  await uploadInfo();
-                },
-                style: ButtonStyle(
-                    backgroundColor: WidgetStateColor.resolveWith(
-                        (states) => const Color(0xFF8F00FF))),
-                child: const Text(
-                  'Save',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+    return BlocBuilder<HomeBloc, HomeBlocState>(
+      builder: (context, state) {
+        return PopScope(
+          canPop: false,
+          child: Scaffold(
+            appBar: AppBar(
+              automaticallyImplyLeading: true,
+              leading: GestureDetector(
+                  onTap: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+
+                    context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
+                    Navigator.of(context).push(
+                      BottomBarAnimatedPageRoute(page: const BottomBar()),
+                    );
+                  },
+                  child: const Icon(Icons.arrow_back)
+              ),
+              actions: [
+                //Save Button
+                Padding(
+                  padding: const EdgeInsets.only(right: 20),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await uploadInfo();
+                    },
+                    style: ButtonStyle(
+                        backgroundColor: WidgetStateColor.resolveWith(
+                                (states) => const Color(0xFF8F00FF))),
+                    child: const Text(
+                      'Save',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+
+                //3Dot Icon
+                popUpMenu()
+              ],
+            ),
+            body: SingleChildScrollView(
+              child: _isLoading
+                  ? loading.central(context)
+                  : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(
+                      height: 10,
+                    ),
+
+                    //title
+                    textFieldWidget(titleController, 'Title'),
+
+                    const SizedBox(
+                      height: 5,
+                    ),
+
+                    //Amount
+                    SizedBox(
+                      height: 60,
+                      child: TextField(
+                        controller: amountController,
+                        onChanged: (value) {
+                          setState(() {
+                            amountFLag = false;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          focusedBorder: const OutlineInputBorder(
+                              borderSide: BorderSide.none),
+                          enabledBorder: const OutlineInputBorder(
+                              borderSide: BorderSide.none),
+                          prefixIcon: const Icon(
+                            Icons.onetwothree,
+                            color: Colors.grey,
+                          ),
+                          filled: true,
+                          fillColor: amountFLag
+                              ? Colors.red.shade50
+                              : Colors.grey[100],
+                          hintText: 'Amount',
+                        ),
+                        cursorColor: Colors.black,
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 5,
+                    ),
+
+                    const Text('Provider'),
+
+                    const SizedBox(
+                      height: 5,
+                    ),
+
+                    //Provider Name
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        color:
+                        providerFlag ? Colors.red.shade50 : Colors.white,
+                      ),
+                      child: SizedBox(
+                        height: 50,
+                        //MediaQuery.of(context).size.width*0.9 - 40,
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          scrollDirection: Axis.horizontal,
+                          itemCount: userNames?.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    selectedProviderFlag = index;
+
+                                    providerFlag = false;
+                                    selectedUserID = userIDs![index];
+                                  });
+                                },
+                                style: ButtonStyle(
+                                  backgroundColor:
+                                  WidgetStateColor.resolveWith(
+                                          (states) =>
+                                      selectedProviderFlag == index
+                                          ? Colors.deepPurple
+                                          : Colors.deepPurple
+                                          .withOpacity(0.08)),
+                                ),
+                                child: Center(
+                                    child: Row(
+                                      children: [
+                                        //image
+                                        state.connection && (userImageURLs![index] != '' || userImageURLs![index].isNotEmpty) ?
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(50),
+                                          child: Image.network(userImageURLs![index]),
+                                        ) : const SizedBox(),
+
+                                        //normal space
+                                        state.connection && (userImageURLs![index] != '' || userImageURLs![index].isNotEmpty) ?
+                                        const SizedBox(width: 5,) : const SizedBox(),
+
+                                        //name
+                                        Text(
+                                          userNames![index],
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: selectedProviderFlag == index
+                                                  ? Colors.white
+                                                  : Colors.black
+                                          ),
+                                        )
+                                      ],
+                                    )
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height: 8,
+                    ),
+
+                    //Description
+                    Container(
+                      constraints: const BoxConstraints(
+                          minHeight: 135, //135
+                          maxHeight: 300),
+                      child: TextField(
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+                        controller: descriptionController,
+                        style: const TextStyle(overflow: TextOverflow.clip),
+                        decoration: InputDecoration(
+                          focusedBorder: const OutlineInputBorder(
+                              borderSide: BorderSide.none),
+                          enabledBorder: const OutlineInputBorder(
+                              borderSide: BorderSide.none),
+                          prefixIcon: const Icon(
+                            Icons.short_text_rounded,
+                            color: Colors.grey,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          hintText: 'Description',
+                        ),
+                        cursorColor: Colors.black,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-
-            //3Dot Icon
-            popUpMenu()
-          ],
-        ),
-        body: SingleChildScrollView(
-          child: _isLoading
-              ? loading.central(context)
-              : Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(
-                        height: 10,
-                      ),
-
-                      //title
-                      textFieldWidget(titleController, 'Title'),
-
-                      const SizedBox(
-                        height: 5,
-                      ),
-
-                      //Amount
-                      SizedBox(
-                        height: 60,
-                        child: TextField(
-                          controller: amountController,
-                          onChanged: (value) {
-                            setState(() {
-                              amountFLag = false;
-                            });
-                          },
-                          decoration: InputDecoration(
-                            focusedBorder: const OutlineInputBorder(
-                                borderSide: BorderSide.none),
-                            enabledBorder: const OutlineInputBorder(
-                                borderSide: BorderSide.none),
-                            prefixIcon: const Icon(
-                              Icons.onetwothree,
-                              color: Colors.grey,
-                            ),
-                            filled: true,
-                            fillColor: amountFLag
-                                ? Colors.red.shade50
-                                : Colors.grey[100],
-                            hintText: 'Amount',
-                          ),
-                          cursorColor: Colors.black,
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-
-                      const SizedBox(
-                        height: 5,
-                      ),
-
-                      const Text('Provider'),
-
-                      const SizedBox(
-                        height: 5,
-                      ),
-
-                      //Provider Name
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(22),
-                          color:
-                              providerFlag ? Colors.red.shade50 : Colors.white,
-                        ),
-                        child: SizedBox(
-                          height: 50,
-                          //MediaQuery.of(context).size.width*0.9 - 40,
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            scrollDirection: Axis.horizontal,
-                            itemCount: userNames?.length,
-                            itemBuilder: (context, index) {
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 4),
-                                child: TextButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      selectedProviderFlag = index;
-
-                                      providerFlag = false;
-                                      selectedUserID = userIDs![index];
-                                    });
-                                  },
-                                  style: ButtonStyle(
-                                    backgroundColor:
-                                        WidgetStateColor.resolveWith(
-                                            (states) =>
-                                                selectedProviderFlag == index
-                                                    ? Colors.deepPurple
-                                                    : Colors.deepPurple
-                                                        .withOpacity(0.08)),
-                                  ),
-                                  child: Center(
-                                      child: Row(
-                                        children: [
-                                          //image
-                                          connection && (userImageURLs![index] != '' || userImageURLs![index].isNotEmpty) ?
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(50),
-                                            child: Image.network(userImageURLs![index]),
-                                          ) : const SizedBox(),
-
-                                          //normal space
-                                          connection && (userImageURLs![index] != '' || userImageURLs![index].isNotEmpty) ?
-                                          const SizedBox(width: 5,) : const SizedBox(),
-
-                                          //name
-                                          Text(
-                                            userNames![index],
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: selectedProviderFlag == index
-                                                    ? Colors.white
-                                                    : Colors.black
-                                            ),
-                                          )
-                                        ],
-                                      )
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(
-                        height: 8,
-                      ),
-
-                      //Description
-                      Container(
-                        constraints: const BoxConstraints(
-                            minHeight: 135, //135
-                            maxHeight: 300),
-                        child: TextField(
-                          maxLines: null,
-                          keyboardType: TextInputType.multiline,
-                          controller: descriptionController,
-                          style: const TextStyle(overflow: TextOverflow.clip),
-                          decoration: InputDecoration(
-                            focusedBorder: const OutlineInputBorder(
-                                borderSide: BorderSide.none),
-                            enabledBorder: const OutlineInputBorder(
-                                borderSide: BorderSide.none),
-                            prefixIcon: const Icon(
-                              Icons.short_text_rounded,
-                              color: Colors.grey,
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                            hintText: 'Description',
-                          ),
-                          cursorColor: Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

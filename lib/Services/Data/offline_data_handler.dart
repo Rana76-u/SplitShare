@@ -1,10 +1,9 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:get/get.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:hive/hive.dart';
+import 'package:splitshare_v3/Controller/Routes/general_router.dart';
 import 'package:splitshare_v3/Models/event.dart';
 import 'package:splitshare_v3/Models/user.dart';
-
 import '../../Models/Hive/Event/hive_event_model.dart';
 import '../../View/My Trips/my_trips.dart';
 import '../Utility/check_connection.dart';
@@ -46,7 +45,8 @@ class OfflineDataHandler {
     return eventsList;
   }
 
-  Future<List<UserModel>> getUserInfo(String tripCode) async {
+  Future<List<UserModel>> getUserInfo(String tripCode, BuildContext context) async {
+    final toNewScreen = navigateTo(context, const MyTrips());
 
     if (await checkConnection()) {
       TripInfoManager().loadAndSaveTripInfo(tripCode);
@@ -68,11 +68,7 @@ class OfflineDataHandler {
             )
         );*/
 
-        //todo:
-        Get.to(
-              () => const MyTrips(),
-          //transition: Transition.fade
-        );
+        toNewScreen;
       }
       //-----------------------------------------------------------------
     }

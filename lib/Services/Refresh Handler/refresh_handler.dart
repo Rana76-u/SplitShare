@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get/get.dart';
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_bloc.dart';
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_event.dart';
 import '../../Controller/Bloc/Home Bloc/home_bloc_state.dart';
@@ -26,9 +25,6 @@ Future<void> homeRefreshHandle(BuildContext context, HomeBlocState state) async 
 
   // Simulate a delay for the refresh indicator
   await Future.delayed(const Duration(seconds: 1));
-
-  // Reload the same page by pushing a new instance onto the stack
-  navigator;
 }
 
 
@@ -49,7 +45,4 @@ Future<void> calculationRefreshHandle(BuildContext context, HomeBlocState state)
 
   // Simulate a delay for the refresh indicator
   await Future.delayed(const Duration(seconds: 1));
-
-  // Reload the same page by pushing a new instance onto the stack
-  navigator;
 }

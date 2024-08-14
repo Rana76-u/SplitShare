@@ -140,7 +140,7 @@ class HomePage extends StatelessWidget {
                             .contains(state.searchController.text.toLowerCase().replaceAll(' ', ''))
                         ){
                           return eventTile(docID, title, description, amount,
-                              time, addedBy, providerName, providerImageUrl, state);
+                              time, addedBy, providerName, providerImageUrl, state, context);
                         }
                         //if nothing matches show nothing
                         else{
@@ -152,7 +152,7 @@ class HomePage extends StatelessWidget {
                       else {
                         if(state.selectedUserID == providedBy){
                           return eventTile(docID, title, description, amount, time,
-                              addedBy, providerName, providerImageUrl, state);
+                              addedBy, providerName, providerImageUrl, state, context);
                         }
                         else {
                           return const SizedBox();
@@ -217,7 +217,7 @@ class HomePage extends StatelessWidget {
             ){
               return eventTile(state.docIDs[index], state.titles[index], state.descriptions[index],
                   double.parse(state.amounts[index]), DateTime.parse(state.times[index]), '',
-                  state.providerNames[index], 'null', state);
+                  state.providerNames[index], 'null', state, context);
             }
             else{
               return const SizedBox();
@@ -228,7 +228,7 @@ class HomePage extends StatelessWidget {
               
               return eventTile(state.docIDs[index], state.titles[index], state.descriptions[index],
                   double.parse(state.amounts[index]), DateTime.parse(state.times[index]),
-                  '', state.providerNames[index], 'null', state);
+                  '', state.providerNames[index], 'null', state, context);
             }
             else {
               return const SizedBox();
@@ -240,4 +240,3 @@ class HomePage extends StatelessWidget {
   }
 
 }
-

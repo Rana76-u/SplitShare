@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
 import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc.dart';
+import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc_event.dart';
 import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc_state.dart';
 import 'package:splitshare_v3/Services/Refresh%20Handler/refresh_handler.dart';
 import 'package:splitshare_v3/Services/trip_info_manager.dart';
@@ -56,10 +57,9 @@ class _CalculationScreenState extends State<CalculationScreen> {
   }
 
   void setConnection() async {
+    final ctx = context.read<HomeBloc>();
     bool connectionStatus = await checkConnection();
-    setState(() {
-      connection = connectionStatus;
-    });
+    ctx.add(ChangeConnection(connectionStatus));
   }
 
   Future<void> getSavedData() async {
@@ -218,7 +218,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
 
                       const SizedBox(height: 5,),
 
-                      individualSpending(),
+                      individualSpending(state),
 
                       const SizedBox(height: 175,),
                     ],
@@ -232,7 +232,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
     );
   }
   
-  Widget individualSpending() {
+  Widget individualSpending(HomeBlocState state) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -248,7 +248,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
             padding: const EdgeInsets.all(10),
             child: Column(
               children: [
-                userDetailRow(index),
+                userDetailRow(index, state),
 
                 //to pay
                 listOfPayers(index),
@@ -260,7 +260,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
     );
   }
   
-  Widget userDetailRow(int index) {
+  Widget userDetailRow(int index, HomeBlocState state) {
 
     String tempPayReceiveAmount = (totalOfIndividuals.values.elementAt(index) - perPerson).abs().toStringAsFixed(1);
     bool redOrGreen = totalOfIndividuals.values.elementAt(index) >= perPerson;
@@ -279,7 +279,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Visibility(
-            visible: connection && userImageUrls.values.elementAt(index) != '' || userImageUrls.values.elementAt(index).isNotEmpty,
+            visible: state.connection && userImageUrls.values.elementAt(index) != '' || userImageUrls.values.elementAt(index).isNotEmpty,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(50),
               child: SizedBox(

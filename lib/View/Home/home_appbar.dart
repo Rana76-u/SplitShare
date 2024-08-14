@@ -1,7 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get/get.dart';
+
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc.dart';
 import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc_state.dart';
 import 'package:splitshare_v3/Services/Utility/check_connection.dart';
@@ -10,6 +11,9 @@ import 'package:splitshare_v3/View/Home/search_filter_widget.dart';
 import 'package:splitshare_v3/View/Profile/profile.dart';
 import 'package:splitshare_v3/Widgets/snack_bar.dart';
 import '../../Controller/Bloc/Home Bloc/home_bloc_event.dart';
+import '../../Controller/Routes/general_router.dart';
+import '../../Services/Hive/clear_boxes.dart';
+import '../My Trips/my_trips.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final HomeBlocState state;
@@ -49,11 +53,43 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               :
           screen == 'Calculation' ? spendingCard(perPerson!, total!)
               :
-          const SizedBox(), //todo: show total card on Calculation
+          const SizedBox(),
         ],
       ),
 
       actions: [
+        GestureDetector(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 5),
+            child: TextButton(
+              onPressed: () async {
+                final toMyTrip = navigateTo(context, const MyTrips());
+                final messenger = ScaffoldMessenger.of(context);
+                bool result = await InternetConnectionChecker().hasConnection;
+
+                if(result == true){
+
+                  await clearAllTheBoxes();
+
+                  toMyTrip;
+                }
+                else{
+                  messenger.showSnackBar(
+                      const SnackBar(content: Text("You're Not Connected"))
+                  );
+                }
+              },
+              child: Text(
+                'My Trips',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor
+                ),
+              ),
+            ),
+          ),
+        ),
+
         Padding(
           padding: const EdgeInsets.only(right: 15),
           child: state.isLoading && state.connection ?
@@ -119,14 +155,16 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     :
                 GestureDetector(
                   onTap: () async {
+                    final toProfilePage = navigateTo(context, const Profile());
                     final blocProvider = BlocProvider.of<HomeBloc>(context);
+                    final initEvent = InitStateEvent(context);
 
                     if(await checkConnection()){
                       blocProvider.add(ChangeConnection(true));
-                      Get.to(() => const Profile(),);
+                      toProfilePage;
                     }
                     else{
-                      blocProvider.add(InitStateEvent());
+                      blocProvider.add(initEvent);
                       if (context.mounted) {
                         showMessage(context);
                       }

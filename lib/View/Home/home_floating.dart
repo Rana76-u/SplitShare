@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import 'package:splitshare_v3/View/CRUD/crud_event.dart';
+
+import '../../Controller/Routes/general_router.dart';
 
 class HomeFloatingActionButton extends StatelessWidget {
   const HomeFloatingActionButton({super.key});
@@ -13,10 +15,7 @@ class HomeFloatingActionButton extends StatelessWidget {
       child: FittedBox(
         child: FloatingActionButton.extended(
           onPressed: () {
-            Get.to(
-              () => CRUDEvent(),
-              transition: Transition.fade,
-            );
+            navigateTo(context, CRUDEvent());
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(100.0),

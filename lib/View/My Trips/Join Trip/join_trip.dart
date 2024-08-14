@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:splitshare_v3/Services/Hive/clear_boxes.dart';
 import 'package:splitshare_v3/Services/trip_info_manager.dart';
@@ -12,6 +11,8 @@ import '../../../Controller/Bloc/BottomBar Bloc/bottombar_bloc.dart';
 import '../../../Controller/Bloc/BottomBar Bloc/bottombar_event.dart';
 import '../../../Controller/Routes/bottombar_routing.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../Controller/Routes/general_router.dart';
 
 class JoinTrip extends StatefulWidget {
   const JoinTrip({super.key});
@@ -33,6 +34,8 @@ class _JoinTripState extends State<JoinTrip> {
   TextEditingController tripCode6Controller = TextEditingController();
 
   Future<void> joinTrip() async {
+    final bottomBarBloc = context.read<BottomBarBloc>();
+    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
     String tripCode = '';
@@ -79,8 +82,8 @@ class _JoinTripState extends State<JoinTrip> {
       TripInfoManager().loadAndSaveTripInfo(tripCode);
 
       
-      context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
-      Navigator.of(context).push(
+      bottomBarBloc.add(BottomBarSelectedItem(0));
+      navigator.push(
         BottomBarAnimatedPageRoute(page: const BottomBar()),
       );
     }
@@ -177,13 +180,10 @@ class _JoinTripState extends State<JoinTrip> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Get.to(
-                      () => const QRScanner(),
-                    //transition: Transition.fade
-                  );
+                  navigateTo(context, const QRScanner());
                 },
                 style: ButtonStyle(
-                  backgroundColor: MaterialStateColor.resolveWith((states) => Colors.deepPurple),
+                  backgroundColor: WidgetStateColor.resolveWith((states) => Colors.deepPurple),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,

@@ -16,9 +16,7 @@ class BottomBar extends StatelessWidget {
   Widget? _getPage(BuildContext context, int index) {
     switch (index) {
       case 0:
-        //todo: ho do I call Events of HomeBloc here?
-      //error says that error: Undefined name 'context'.
-        BlocProvider.of<HomeBloc>(context).add(InitStateEvent());
+        BlocProvider.of<HomeBloc>(context).add(InitStateEvent(context));
         return const HomePage();
       case 1:
         return const CalculationScreen();

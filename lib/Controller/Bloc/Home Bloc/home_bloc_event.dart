@@ -1,7 +1,12 @@
 
+import 'package:flutter/cupertino.dart';
+
 abstract class HomeBlocEvent{}
 
-class InitStateEvent extends HomeBlocEvent {}
+class InitStateEvent extends HomeBlocEvent {
+  final BuildContext context;
+  InitStateEvent(this.context);
+}
 
 class IsLoading extends HomeBlocEvent {}
 

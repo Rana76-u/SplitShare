@@ -1,8 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:splitshare_v3/View/Profile/profile.dart';
-
+import '../../Controller/Routes/general_router.dart';
 import 'Join Trip/join_trip.dart';
 
 class MyTripAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -29,10 +28,7 @@ class MyTripAppBar extends StatelessWidget implements PreferredSizeWidget {
           padding: const EdgeInsets.only(right: 10),
           child: ElevatedButton(
             onPressed: () {
-              Get.to(
-                  () => const JoinTrip(),
-                  transition: Transition.fade
-              );
+              navigateTo(context, const JoinTrip());
             },
             child: const Text(
                 'Join',
@@ -49,10 +45,7 @@ class MyTripAppBar extends StatelessWidget implements PreferredSizeWidget {
           padding: const EdgeInsets.only(right: 20),
           child: GestureDetector(
             onTap: () {
-              Get.to(
-                  () => const Profile(),
-                transition: Transition.fade
-              );
+              navigateTo(context, const Profile());
             },
             child: SizedBox(
               height: 35,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:splitshare_v3/Controller/Routes/general_router.dart';
 import 'package:splitshare_v3/Services/PDF/pdf_invoice_api.dart';
 import 'package:splitshare_v3/Models/pdf/invoice.dart';
 import 'package:splitshare_v3/Services/trip_info_manager.dart';
@@ -112,9 +112,7 @@ class _CalculationFloatingState extends State<CalculationFloating> {
                 )
             );
 
-            Get.to( () => ViewPDF(pdf: pdfFile),
-                transition: Transition.fade
-            );
+            navigateTo(context, ViewPDF(pdf: pdfFile));
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(100.0),

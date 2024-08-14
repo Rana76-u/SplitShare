@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import 'package:splitshare_v3/View/My%20Trips/Create%20Trip/create_trip.dart';
+
+import '../../Controller/Routes/general_router.dart';
 
 class MyTripFloatingActionButton extends StatelessWidget {
   const MyTripFloatingActionButton({super.key});
@@ -13,10 +15,7 @@ class MyTripFloatingActionButton extends StatelessWidget {
       child: FittedBox(
         child: FloatingActionButton.extended(
           onPressed: () {
-            Get.to(
-              () => const CreateTrip(),
-              transition: Transition.fade,
-            );
+            navigateTo(context, const CreateTrip());
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(100.0),

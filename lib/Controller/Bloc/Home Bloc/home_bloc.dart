@@ -38,7 +38,7 @@ class HomeBloc extends Bloc<HomeBlocEvent, HomeBlocState> {
         eventList = await OfflineDataHandler().getAllSaveEventsData();
       }*/
 
-      List<UserModel> userList = await OfflineDataHandler().getUserInfo(tripCode);
+      List<UserModel> userList = await OfflineDataHandler().getUserInfo(tripCode, event.context);
 
       emit(state.copyWith(
           connection: connection,

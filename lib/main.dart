@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc.dart';
 import 'package:splitshare_v3/Services/trip_info_manager.dart';
@@ -80,7 +79,7 @@ class MyApp extends StatelessWidget {
         ],
         child: Builder(
           builder: (context) {
-            return GetMaterialApp(
+            return MaterialApp(
               title: 'SplitShare',
               theme: ThemeData(
                 colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

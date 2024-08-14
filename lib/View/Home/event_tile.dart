@@ -1,27 +1,28 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import 'package:intl/intl.dart';
 import '../../Controller/Bloc/Home Bloc/home_bloc_state.dart';
+import '../../Controller/Routes/general_router.dart';
 import '../CRUD/crud_event.dart';
 
 Widget eventTile(String docID, String title, String description ,
-    double amount, DateTime time, String addedBy, String providerName, String providerImageUrl, HomeBlocState state) {
+    double amount, DateTime time, String addedBy, String providerName,
+    String providerImageUrl, HomeBlocState state,BuildContext context ) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 5),
     child: ListTile(
       onTap: () {
-        Get.to(
-              () => CRUDEvent(
-            title: title,
-            amount: amount.toString(),
-            description: description,
-            provider: providerName,
-            docID: docID,
-            time: time.toString(),
-          ),
-          //transition: Transition.fade
-        );
+        navigateTo(
+            context,
+            CRUDEvent(
+          title: title,
+          amount: amount.toString(),
+          description: description,
+          provider: providerName,
+          docID: docID,
+          time: time.toString(),
+        ));
       },
       //user image
       leading: state.connection && (providerImageUrl != 'null' || providerImageUrl != '') ?

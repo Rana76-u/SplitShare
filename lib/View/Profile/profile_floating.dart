@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:splitshare_v3/Services/Authentication/auth_service.dart';
 import 'package:splitshare_v3/Services/Utility/screensize.dart';
@@ -7,6 +7,7 @@ import 'package:splitshare_v3/View/Login/login.dart';
 import 'package:splitshare_v3/View/My%20Trips/my_trips.dart';
 import 'package:splitshare_v3/Widgets/snack_bar.dart';
 
+import '../../Controller/Routes/general_router.dart';
 import '../../Services/Hive/clear_boxes.dart';
 
 class ProfileFloatingActionButton extends StatelessWidget {
@@ -30,6 +31,7 @@ class ProfileFloatingActionButton extends StatelessWidget {
               child: FloatingActionButton.extended(
                 heroTag: 'Btn1',
                 onPressed: () async {
+                  final toMyTrip = navigateTo(context, const MyTrips());
                   final messenger = ScaffoldMessenger.of(context);
                   bool result = await InternetConnectionChecker().hasConnection;
 
@@ -37,10 +39,7 @@ class ProfileFloatingActionButton extends StatelessWidget {
 
                     await clearAllTheBoxes();
 
-                    Get.to(
-                      () => const MyTrips(),
-                      transition: Transition.fade,
-                    );
+                    toMyTrip;
                   }
                   else{
                     messenger.showSnackBar(
@@ -75,6 +74,7 @@ class ProfileFloatingActionButton extends StatelessWidget {
               child: FloatingActionButton.extended(
                 heroTag: 'Btn2',
                 onPressed: () async {
+                  final toLoginPage = navigateTo(context, const LoginPage());
                   var showOfflineMessage = showMessage(context);
 
                   if(await InternetConnectionChecker().hasConnection){
@@ -83,10 +83,8 @@ class ProfileFloatingActionButton extends StatelessWidget {
 
                     AuthService().signOut();
 
-                    Get.to(
-                            () => const LoginPage(),
-                        transition: Transition.fade
-                    );
+                    toLoginPage;
+
                   }
                   else{
                     showOfflineMessage;

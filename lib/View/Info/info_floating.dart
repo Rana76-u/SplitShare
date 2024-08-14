@@ -3,7 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get/get.dart';
+import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc.dart';
+import 'package:splitshare_v3/Controller/Bloc/Home%20Bloc/home_bloc_state.dart';
 import 'package:splitshare_v3/Services/Utility/check_connection.dart';
 import 'package:splitshare_v3/Services/user_api.dart';
 import 'package:splitshare_v3/Services/trip_info_manager.dart';
@@ -11,14 +12,12 @@ import 'package:splitshare_v3/Widgets/snack_bar.dart';
 
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_bloc.dart';
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_event.dart';
+import '../../Controller/Bloc/Home Bloc/home_bloc_event.dart';
 import '../../Controller/Routes/bottombar_routing.dart';
 import '../../Widgets/bottom_nav_bar.dart';
 
 class InfoFloatingActionButton extends StatefulWidget {
-  //final bool connection;
-  const InfoFloatingActionButton({super.key,
-    //required this.connection
-  });
+  const InfoFloatingActionButton({super.key});
 
   @override
   State<InfoFloatingActionButton> createState() => _InfoFloatingActionButtonState();
@@ -49,6 +48,7 @@ class _InfoFloatingActionButtonState extends State<InfoFloatingActionButton> {
             TextButton(
               child: const Text('Submit'),
               onPressed: () async {
+                final bottomBarBloc = context.read<BottomBarBloc>();
                 final navigator = Navigator.of(context);
                 String? tripCode = await TripInfoManager().getTripCode();
 
@@ -64,8 +64,8 @@ class _InfoFloatingActionButtonState extends State<InfoFloatingActionButton> {
 
                 //todo: this doesn't work until going to home
                 
-                context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
-                Navigator.of(context).push(
+                bottomBarBloc.add(BottomBarSelectedItem(0));
+                navigator.push(
                   BottomBarAnimatedPageRoute(page: const BottomBar()),
                 );
               },
@@ -78,35 +78,43 @@ class _InfoFloatingActionButtonState extends State<InfoFloatingActionButton> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 60,
-      width: 200,
-      child: FittedBox(
-        child: FloatingActionButton.extended(
-          onPressed: () async {
-            if(await checkConnection()){
-              _showTextInputDialog(context);
-            }
-            else{
-              connection = false;
-              showMessage(context);
-            }
-          },
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(100.0),
-          ),
-          label: const Text(
-            'Add Participant',
-            style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15
+    return BlocBuilder<HomeBloc, HomeBlocState>(
+      builder: (context, state) {
+        return SizedBox(
+          height: 60,
+          width: 200,
+          child: FittedBox(
+            child: FloatingActionButton.extended(
+              onPressed: () async {
+                final inputDialogue = _showTextInputDialog(context);
+                final message = showMessage(context);
+                final homeBloc = context.read<HomeBloc>();
+
+                if(await checkConnection()){
+                  inputDialogue;
+                }
+                else{
+                  homeBloc.add(ChangeConnection(false));
+                  message;
+                }
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(100.0),
+              ),
+              label: const Text(
+                'Add Participant',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15
+                ),
+              ),
+              icon: const Icon(
+                  Icons.add_circle
+              ),
             ),
           ),
-          icon: const Icon(
-              Icons.add_circle
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

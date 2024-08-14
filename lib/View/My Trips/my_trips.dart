@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import 'package:splitshare_v3/Services/Notification/notification_api.dart';
@@ -260,6 +259,8 @@ class _MyTripsState extends State<MyTrips> {
           ),
           child: ListTile(
             onTap: () async {
+              final bottomBarBloc = context.read<BottomBarBloc>();
+              final navigator = Navigator.of(context);
 
               setState(() {
                 _isLoading = true;
@@ -274,9 +275,8 @@ class _MyTripsState extends State<MyTrips> {
                 _isLoading = false;
               });
 
-              
-              context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
-              Navigator.of(context).push(
+              bottomBarBloc.add(BottomBarSelectedItem(0));
+              navigator.push(
                 BottomBarAnimatedPageRoute(page: const BottomBar()),
               );
             },

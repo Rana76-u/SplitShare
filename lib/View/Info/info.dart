@@ -1,19 +1,25 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get/get.dart';
+
 import 'package:hive/hive.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:splitshare_v3/Controller/Routes/general_router.dart';
 import 'package:splitshare_v3/View/Home/home_appbar.dart';
 import 'package:splitshare_v3/View/Info/info_floating.dart';
+import 'package:splitshare_v3/View/Info/version.dart';
 import 'package:splitshare_v3/View/My%20Trips/my_trips.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
 import 'package:splitshare_v3/Widgets/snack_bar.dart';
+import '../../Controller/Bloc/Home Bloc/home_bloc.dart';
+import '../../Controller/Bloc/Home Bloc/home_bloc_event.dart';
+import '../../Controller/Bloc/Home Bloc/home_bloc_state.dart';
 import '../../Services/Utility/check_connection.dart';
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_bloc.dart';
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_event.dart';
@@ -30,7 +36,6 @@ class InfoPage extends StatefulWidget {
 }
 
 class _InfoPageState extends State<InfoPage> {
-  //bool connection = false;
   bool _isLoading = false;
 
   String tripCreator = '';
@@ -51,10 +56,9 @@ class _InfoPageState extends State<InfoPage> {
   }
 
   void setConnection() async {
+    final ctx = context.read<HomeBloc>();
     bool connectionStatus = await checkConnection();
-    setState(() {
-      connection = connectionStatus;
-    });
+    ctx.add(ChangeConnection(connectionStatus));
   }
 
   void loadInfo() async {
@@ -107,9 +111,6 @@ class _InfoPageState extends State<InfoPage> {
 
     // Simulate a delay for the refresh indicator
     await Future.delayed(const Duration(seconds: 1));
-
-    // Reload the same page by pushing a new instance onto the stack
-    navigator;
   }
 
   void parseTimestampString(String timestampString) {
@@ -158,6 +159,7 @@ class _InfoPageState extends State<InfoPage> {
   }
 
   void deleteUser(int index) async {
+    final toMyTrip = navigateTo(context, const MyTrips());
     final messenger = ScaffoldMessenger.of(context);
 
     // Dismiss the dialog
@@ -223,8 +225,7 @@ class _InfoPageState extends State<InfoPage> {
             messenger
                 .showSnackBar(const SnackBar(content: Text('You left the trip')));
 
-            Get.to(() => const MyTrips(), //transition: Transition.fade
-            );
+            toMyTrip;
           }
           else {
             //Delete from Save
@@ -254,23 +255,24 @@ class _InfoPageState extends State<InfoPage> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      onPopInvoked: (didPop) {
-        context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
-        Navigator.of(context).push(
-          BottomBarAnimatedPageRoute(page: const BottomBar()),
-        );
-      },
-      child: Scaffold(
-        //todo: add appbar
-        //appBar: const HomeAppBar(state: state,),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: const InfoFloatingActionButton(),
-        body: _isLoading
-            ? const Center(
+    return BlocBuilder<HomeBloc, HomeBlocState>(
+        builder: (context, state) {
+          return PopScope(
+            onPopInvoked: (didPop) {
+              context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
+              Navigator.of(context).push(
+                BottomBarAnimatedPageRoute(page: const BottomBar()),
+              );
+            },
+            child: Scaffold(
+              appBar: HomeAppBar(state: state, screen: 'Trip',),
+              floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+              floatingActionButton: const InfoFloatingActionButton(),
+              body: _isLoading
+                  ? const Center(
                 child: CircularProgressIndicator(),
               )
-            : SingleChildScrollView(
+                  : SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 15),
                   child: Column(
@@ -291,7 +293,7 @@ class _InfoPageState extends State<InfoPage> {
                                 color: Colors.purple),
                           ),
 
-                          editTripWidget()
+                          editTripWidget(state)
                         ],
                       ),
 
@@ -307,7 +309,7 @@ class _InfoPageState extends State<InfoPage> {
                       const SizedBox(
                         height: 10,
                       ),
-                      userBuilder(),
+                      userBuilder(state),
 
                       //version
                       version(),
@@ -317,17 +319,18 @@ class _InfoPageState extends State<InfoPage> {
                   ),
                 ),
               ),
-      ),
+            ),
+          );
+        },
     );
   }
 
-  Widget editTripWidget() {
+  Widget editTripWidget(HomeBlocState state) {
     return IconButton(
       onPressed: () async {
+        final ctx = context.read<HomeBloc>();
         if(await checkConnection()){
-
-          connection = true;
-
+          ctx.add(ChangeConnection(true));
           if(mounted){
             showDialog(
               context: context,
@@ -373,10 +376,9 @@ class _InfoPageState extends State<InfoPage> {
               },
             );
           }
-
         }
         else{
-          connection = false;
+          ctx.add(ChangeConnection(false));
 
           if(mounted){
             showMessage(context);
@@ -540,7 +542,7 @@ class _InfoPageState extends State<InfoPage> {
     );
   }
 
-  Widget userBuilder() {
+  Widget userBuilder(HomeBlocState state) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -551,10 +553,14 @@ class _InfoPageState extends State<InfoPage> {
           child: ListTile(
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(50),
-                child: connection && userImageUrls[index] != '' || userImageUrls[index].isNotEmpty ?
+                child: state.connection && userImageUrls[index] != '' || userImageUrls[index].isNotEmpty ?
                 SizedBox(
                   height: 32.5,
-                  child: Image.network(userImageUrls[index]),
+                  child: CachedNetworkImage(
+                    imageUrl: userImageUrls[index],
+                    placeholder: (context, url) => const CircularProgressIndicator(),
+                    errorWidget: (context, url, error) => const Icon(Icons.error),
+                  ),
                 )
                     :
                 const Icon(Icons.person),
@@ -613,16 +619,5 @@ class _InfoPageState extends State<InfoPage> {
     );
   }
 
-  Widget version() {
-    return const Padding(
-      padding: EdgeInsets.only(top: 50),
-      child: Center(
-        child: Text(
-          'Version 5.0.0',
-          style: TextStyle(color: Colors.grey),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
+
 }

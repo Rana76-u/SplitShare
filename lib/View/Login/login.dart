@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:splitshare_v3/Services/Authentication/auth_service.dart';
 import 'package:splitshare_v3/View/My%20Trips/my_trips.dart';
@@ -66,9 +65,8 @@ class _LoginPageState extends State<LoginPage> {
                     AuthService().signInWithGoogle().then((_) {
                       setState(() {
                         isLoading = false;
-                        Get.to(
-                            () => const MyTrips(),
-                          transition: Transition.fade
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const MyTrips()),
                         );
                       });
                     })
