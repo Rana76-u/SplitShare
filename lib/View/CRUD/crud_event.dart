@@ -179,17 +179,16 @@ class _CRUDEventState extends State<CRUDEvent> {
         }
       }
 
+      // Return to Home
+      bottomBarBloc.add(BottomBarSelectedItem(0));
+      navigator.push(
+        BottomBarAnimatedPageRoute(page: const BottomBar()),
+      );
     }
 
     setState(() {
       _isLoading = false;
     });
-
-    
-    bottomBarBloc.add(BottomBarSelectedItem(0));
-    navigator.push(
-      BottomBarAnimatedPageRoute(page: const BottomBar()),
-    );
   }
 
   @override

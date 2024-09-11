@@ -14,6 +14,7 @@ import '../../Controller/Bloc/BottomBar Bloc/bottombar_bloc.dart';
 import '../../Controller/Bloc/BottomBar Bloc/bottombar_event.dart';
 import '../../Controller/Routes/bottombar_routing.dart';
 import '../../Models/Hive/Event/hive_event_model.dart';
+import '../../Services/Utility/random_color_generator.dart';
 import '../../Widgets/bottom_nav_bar.dart';
 import '../Home/home_appbar.dart';
 
@@ -278,9 +279,8 @@ class _CalculationScreenState extends State<CalculationScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Visibility(
-            visible: state.connection && userImageUrls.values.elementAt(index) != '' || userImageUrls.values.elementAt(index).isNotEmpty,
-            child: ClipRRect(
+          if(state.connection && userImageUrls.values.elementAt(index) != '' || userImageUrls.values.elementAt(index).isNotEmpty)...[
+            ClipRRect(
               borderRadius: BorderRadius.circular(50),
               child: SizedBox(
                 height: 35,
@@ -290,9 +290,27 @@ class _CalculationScreenState extends State<CalculationScreen> {
                   errorWidget: (context, url, error) => const Icon(Icons.error),
                 ),
               ),
+            )
+          ]else...[
+            Container(
+              height: 35,
+              width: 35,
+              decoration: BoxDecoration(
+                color: getColorFromIndex(index),
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: Center(
+                child: Text(
+                  state.userNames[index][0].toUpperCase(),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 5,),
+          ],
+          const SizedBox(width: 7,),
 
           Expanded(
             child: Text(
@@ -306,7 +324,7 @@ class _CalculationScreenState extends State<CalculationScreen> {
           const SizedBox(width: 15,),
           //amounts
           Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Text.rich(

@@ -46,7 +46,7 @@ class OfflineDataHandler {
   }
 
   Future<List<UserModel>> getUserInfo(String tripCode, BuildContext context) async {
-    final toNewScreen = navigateTo(context, const MyTrips());
+    //final toNewScreen = navigateTo(context, const MyTrips());
 
     if (await checkConnection()) {
       TripInfoManager().loadAndSaveTripInfo(tripCode);
@@ -68,7 +68,8 @@ class OfflineDataHandler {
             )
         );*/
 
-        toNewScreen;
+        //toNewScreen;
+        navigateTo(context, const MyTrips());
       }
       //-----------------------------------------------------------------
     }

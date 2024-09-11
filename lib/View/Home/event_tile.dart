@@ -16,13 +16,13 @@ Widget eventTile(String docID, String title, String description ,
         navigateTo(
             context,
             CRUDEvent(
-          title: title,
-          amount: amount.toString(),
-          description: description,
-          provider: providerName,
-          docID: docID,
-          time: time.toString(),
-        ));
+              title: title,
+              amount: amount.toString(),
+              description: description,
+              provider: providerName,
+              docID: docID,
+              time: time.toString(),
+            ));
       },
       //user image
       leading: state.connection && (providerImageUrl != 'null' || providerImageUrl != '') ?
@@ -51,42 +51,24 @@ Widget eventTile(String docID, String title, String description ,
             overflow: TextOverflow.ellipsis),
       ),
       //user name
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            DateFormat('hh:mm a, EE, dd MMM,yy')
-                .format(time),
-            style: const TextStyle(
-                color: Colors.grey,
-                overflow: TextOverflow.ellipsis),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              const Text('Provider: '),
-              Expanded(
-                child: Text(
-                  providerName,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      overflow: TextOverflow.ellipsis),
-                ),
-              ),
-            ],
-          )
-        ],
+      subtitle: Text(
+        DateFormat('hh:mm a, EE, dd MMM,yy')
+            .format(time),
+        style: const TextStyle(
+            color: Colors.grey,
+            overflow: TextOverflow.ellipsis),
       ),
       trailing: Text(
-        '${amount.toStringAsFixed(0)}/-',
+        amount.toStringAsFixed(0),
         style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 25,
             overflow: TextOverflow.ellipsis),
       ),
+      dense: true,
       tileColor: Colors.blue.shade50,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10)
+          borderRadius: BorderRadius.circular(12)
       ),
     ),
   );

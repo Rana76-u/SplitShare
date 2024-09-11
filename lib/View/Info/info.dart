@@ -12,7 +12,6 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:splitshare_v3/Controller/Routes/general_router.dart';
 import 'package:splitshare_v3/View/Home/home_appbar.dart';
-import 'package:splitshare_v3/View/Info/info_floating.dart';
 import 'package:splitshare_v3/View/Info/version.dart';
 import 'package:splitshare_v3/View/My%20Trips/my_trips.dart';
 import 'package:splitshare_v3/Widgets/bottom_nav_bar.dart';
@@ -26,7 +25,9 @@ import '../../Controller/Bloc/BottomBar Bloc/bottombar_event.dart';
 import '../../Controller/Routes/bottombar_routing.dart';
 import '../../Models/Hive/Event/hive_event_model.dart';
 import '../../Models/Hive/User/hive_user_model.dart';
+import '../../Services/Utility/random_color_generator.dart';
 import '../../Services/trip_info_manager.dart';
+import '../../Services/user_api.dart';
 
 class InfoPage extends StatefulWidget {
   const InfoPage({super.key});
@@ -94,24 +95,6 @@ class _InfoPageState extends State<InfoPage> {
     });
   }
 
-  Future<void> _handleRefresh() async {
-    context.read<BottomBarBloc>().add(BottomBarSelectedItem(0));
-
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return const BottomBar(); // Return the BottomBar widget directly
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return child; // You can add custom transitions here if needed
-        },
-      ),
-    );
-
-    // Simulate a delay for the refresh indicator
-    await Future.delayed(const Duration(seconds: 1));
-  }
 
   void parseTimestampString(String timestampString) {
     int seconds =
@@ -159,13 +142,12 @@ class _InfoPageState extends State<InfoPage> {
   }
 
   void deleteUser(int index) async {
-    final toMyTrip = navigateTo(context, const MyTrips());
     final messenger = ScaffoldMessenger.of(context);
 
     // Dismiss the dialog
-    if (mounted) {
+    /*if (mounted) {
       Navigator.pop(context);
-    }
+    }*/
 
     //Internet connection needed for deletion
     if (await InternetConnectionChecker().hasConnection) {
@@ -207,16 +189,35 @@ class _InfoPageState extends State<InfoPage> {
           });
 
           //Delete from trip
-          FirebaseFirestore.instance.collection('trips').doc(tripCode).update({
+          await FirebaseFirestore.instance.collection('trips').doc(tripCode).update({
             'users': FieldValue.arrayRemove([userIDs[index]]),
           });
 
           //Delete from userData
-          FirebaseFirestore.instance
+          await FirebaseFirestore.instance
               .collection('userData')
               .doc(userIDs[index])
-              .update({
-            'tripCodes': FieldValue.arrayRemove([tripCode])
+              .get()
+              .then((DocumentSnapshot documentSnapshot) {
+            if (documentSnapshot.exists) {
+              String imageURL = documentSnapshot.get('imageURL') as String;
+
+              if (imageURL.isEmpty) {
+                // If the imageURL is empty, that means the user is dummy, so delete the user
+                FirebaseFirestore.instance
+                    .collection('userData')
+                    .doc(userIDs[index])
+                    .delete();
+              } else {
+                // Otherwise, remove the tripCode from the tripCodes array
+                FirebaseFirestore.instance
+                    .collection('userData')
+                    .doc(userIDs[index])
+                    .update({
+                  'tripCodes': FieldValue.arrayRemove([tripCode])
+                });
+              }
+            }
           });
 
 
@@ -225,7 +226,7 @@ class _InfoPageState extends State<InfoPage> {
             messenger
                 .showSnackBar(const SnackBar(content: Text('You left the trip')));
 
-            toMyTrip;
+            navigateTo(context, const MyTrips());
           }
           else {
             //Delete from Save
@@ -255,6 +256,8 @@ class _InfoPageState extends State<InfoPage> {
 
   @override
   Widget build(BuildContext context) {
+    TextEditingController nameController = TextEditingController();
+
     return BlocBuilder<HomeBloc, HomeBlocState>(
         builder: (context, state) {
           return PopScope(
@@ -267,7 +270,87 @@ class _InfoPageState extends State<InfoPage> {
             child: Scaffold(
               appBar: HomeAppBar(state: state, screen: 'Trip',),
               floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-              floatingActionButton: const InfoFloatingActionButton(),
+              floatingActionButton: SizedBox(
+                height: 60,
+                width: 200,
+                child: FittedBox(
+                  child: FloatingActionButton.extended(
+                    heroTag: 'InfoFloatingBtn',
+                    onPressed: () async {
+                      final inputDialogue = showDialog<void>(
+                        context: context,
+                        barrierDismissible: false, // user must tap button for close dialog
+                        builder: (BuildContext dialogContext) {
+                          return AlertDialog(
+                            title: const Text('Enter Participant Name'),
+                            content: TextField(
+                              controller: nameController,
+                              decoration: const InputDecoration(hintText: "Type name here"),
+                            ),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('Cancel'),
+                                onPressed: () {
+                                  Navigator.of(dialogContext).pop();
+                                },
+                              ),
+                              TextButton(
+                                child: const Text('Submit'),
+                                onPressed: () async {
+                                  context.read<BottomBarBloc>();
+                                  final dialogNavigator = Navigator.of(dialogContext);
+                                  Navigator.of(context);
+                                  String? tripCode = await TripInfoManager().getTripCode();
+
+                                  //generate new user id
+                                  String newUserID = UserApi().generateUID();
+
+                                  //online
+                                  UserApi().addUser(newUserID, nameController.text, '', [tripCode]);
+                                  //offline
+                                  UserApi().addIntoTripsUserList(tripCode, newUserID);
+
+                                  setState(() {
+                                    userIDs.add(newUserID);
+                                    userNames.add(nameController.text);
+                                    nameController.clear();
+                                    userImageUrls.add('');
+                                  });
+
+                                  dialogNavigator.pop();
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      final message = showMessage(context);
+                      final homeBloc = context.read<HomeBloc>();
+
+                      if(await checkConnection()){
+                        inputDialogue;
+                      }
+                      else{
+                        homeBloc.add(ChangeConnection(false));
+                        message;
+                      }
+                    },
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(100.0),
+                    ),
+                    label: const Text(
+                      'Add User',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15
+                      ),
+                    ),
+                    icon: const Icon(
+                        Icons.add_circle
+                    ),
+                  ),
+                ),
+              ),
               body: _isLoading
                   ? const Center(
                 child: CircularProgressIndicator(),
@@ -284,21 +367,132 @@ class _InfoPageState extends State<InfoPage> {
                       ),
 
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            tripName,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 25,
-                                color: Colors.purple),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    tripName,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 25,
+                                        color: Colors.purple),
+                                  ),
+                                  editTripWidget(state),
+                                ],
+                              ),
+                              _tripInfoWidget(),
+                            ],
                           ),
 
-                          editTripWidget(state)
+                          //Trip Code
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "#Access Code",
+                                style: TextStyle(fontSize: 13, color: Colors.grey),
+                              ),
+                              SelectableText(tripCode,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      overflow: TextOverflow.clip,
+                                      fontSize: 40)),
+                              Row(
+                                children: [
+                                  //copy
+                                  GestureDetector(
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Trip Code Copied')));
+                                      Clipboard.setData(ClipboardData(text: tripCode));
+                                    },
+                                    child: Container(
+                                      height: 37,
+                                      width: 37,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        border: Border.all(color: Colors.grey),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(5),
+                                        child: Icon(
+                                          Icons.copy,
+                                          size: 20,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+
+                                  //QR Code
+                                  GestureDetector(
+                                    onTap: () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('QR Code Generated')));
+                                      _generateQR();
+                                    },
+                                    child: Container(
+                                      height: 37,
+                                      width: 37,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        border: Border.all(color: Colors.grey),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(5),
+                                        child: Icon(
+                                          Icons.qr_code_rounded,
+                                          size: 20,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+
+                                  //Share Code
+                                  GestureDetector(
+                                    onTap: () async {
+                                      await Share.share(
+                                          'SplitShare: ( $tripName) Trip Joining Code: $tripCode');
+                                    },
+                                    child: Container(
+                                      height: 37,
+                                      width: 37,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        border: Border.all(color: Colors.grey),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(5),
+                                        child: Icon(
+                                          Icons.share_rounded,
+                                          size: 20,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            ],
+                          )
                         ],
                       ),
-
-                      //Trip info & TripCode
-                      _tripInfoWidget(),
 
                       const SizedBox(
                         height: 15,
@@ -363,11 +557,12 @@ class _InfoPageState extends State<InfoPage> {
                         final tripBox = Hive.box('tripInfo');
                         await tripBox.put('tripName', tripNameController.text);
 
+                        setState(() {
+                          tripName = tripNameController.text;
+                        });
+
                         // Dismiss the dialogue
                         navigator.pop();
-
-                        // updates the page
-                        _handleRefresh();
                       },
                       child: const Text('Submit'),
                     ),
@@ -435,109 +630,7 @@ class _InfoPageState extends State<InfoPage> {
           width: 15,
         ),
 
-        //Trip Code
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "#Access Code",
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            SelectableText(tripCode,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    overflow: TextOverflow.clip,
-                    fontSize: 40)),
-            Row(
-              children: [
-                //copy
-                GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Trip Code Copied')));
-                    Clipboard.setData(ClipboardData(text: tripCode));
-                  },
-                  child: Container(
-                    height: 37,
-                    width: 37,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      border: Border.all(color: Colors.grey),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(5),
-                      child: Icon(
-                        Icons.copy,
-                        size: 20,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
 
-                const SizedBox(
-                  width: 10,
-                ),
-
-                //QR Code
-                GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('QR Code Generated')));
-                    _generateQR();
-                  },
-                  child: Container(
-                    height: 37,
-                    width: 37,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      border: Border.all(color: Colors.grey),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(5),
-                      child: Icon(
-                        Icons.qr_code_rounded,
-                        size: 20,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(
-                  width: 10,
-                ),
-
-                //Share Code
-                GestureDetector(
-                  onTap: () async {
-                    await Share.share(
-                        'SplitShare: ( $tripName) Trip Joining Code: $tripCode');
-                  },
-                  child: Container(
-                    height: 37,
-                    width: 37,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      border: Border.all(color: Colors.grey),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(5),
-                      child: Icon(
-                        Icons.share_rounded,
-                        size: 20,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          ],
-        )
       ],
     );
   }
@@ -551,10 +644,10 @@ class _InfoPageState extends State<InfoPage> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 5),
           child: ListTile(
-              leading: ClipRRect(
+              leading: state.connection && userImageUrls[index] != '' || userImageUrls[index].isNotEmpty ?
+              ClipRRect(
                 borderRadius: BorderRadius.circular(50),
-                child: state.connection && userImageUrls[index] != '' || userImageUrls[index].isNotEmpty ?
-                SizedBox(
+                child: SizedBox(
                   height: 32.5,
                   child: CachedNetworkImage(
                     imageUrl: userImageUrls[index],
@@ -562,8 +655,23 @@ class _InfoPageState extends State<InfoPage> {
                     errorWidget: (context, url, error) => const Icon(Icons.error),
                   ),
                 )
-                    :
-                const Icon(Icons.person),
+              ) :
+              Container(
+                width: 32.5,
+                height: 32.5,
+                decoration: BoxDecoration(
+                  color: getColorFromIndex(index),
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: Center(
+                  child: Text(
+                    state.userNames[index][0].toUpperCase(),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white
+                    ),
+                  ),
+                ),
               ),
               title: Text(
                 userNames[index],
@@ -576,7 +684,7 @@ class _InfoPageState extends State<InfoPage> {
                 onTap: () {
                   showDialog(
                     context: context,
-                    builder: (context) {
+                    builder: (dialogContext) {
                       return AlertDialog(
                         title: const Text("Confirm Delete"),
                         content: const Text("Are you sure you want to delete?"),
@@ -590,6 +698,7 @@ class _InfoPageState extends State<InfoPage> {
                           ),
                           TextButton(
                             onPressed: () async {
+                              Navigator.of(dialogContext).pop();
                               // Perform the delete action
                               deleteUser(index = index);
                             },

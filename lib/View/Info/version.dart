@@ -5,7 +5,7 @@ Widget version() {
     padding: EdgeInsets.only(top: 50),
     child: Center(
       child: Text(
-        'Version 6.2.0',
+        'Version 6.2.2',
         style: TextStyle(color: Colors.grey),
         textAlign: TextAlign.center,
       ),

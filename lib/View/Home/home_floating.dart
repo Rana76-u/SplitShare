@@ -21,7 +21,7 @@ class HomeFloatingActionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(100.0),
           ),
           label: const Text(
-            'Add Event',
+            'Add Expense',
             style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 15
